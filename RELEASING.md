@@ -136,3 +136,19 @@ A clean repository's first push has `github.event.before` all zeroes. The workfl
 ### The package is absent from npm
 
 Confirm that npm published the package publicly and that `package.json` contains the `omp-plugin` keyword. Gallery indexing may take some time.
+
+## First-publish notes (this fork)
+
+npm 11.19 turns a brand-new package name into a *staged* publish: it publishes a
+public `0.0.0-stage` placeholder, withholds the real version, and answers any
+later publish with `E409 Cannot publish over previously staged version`. A
+publish token cannot see or approve the stage (`npm stage list` returns nothing),
+so approval happens from a 2FA-verified session or the package page.
+
+- `3.5.1` was staged and approved while proving the flow; it is the same code as
+  `3.5.0` with only the version field changed. It cannot be unpublished with the
+  available token (granular tokens that bypass 2FA may not unpublish), so the
+  `latest` tag is pinned to `3.5.0` and the version in `package.json` stays there.
+- The `0.0.0-stage` placeholder remains published and is not used by anyone.
+- Future releases: configure a trusted publisher for this repository on npm, or
+  approve each staged version from the package page before announcing it.
