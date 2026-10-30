@@ -25,8 +25,8 @@ Former bundled roles, `/plan`, its plan skill, and `/skill:orchestrate` belong t
 
 ## omp-only fork
 
-This repository is an omp-only fork of the upstream `omp-herdr-agents` package. The
-child harness is `omp` (oh-my-pi); no Pi child harness ships here.
+This repository is an omp-only fork of `giuseppecrj/pi-herdr-agents`. The child
+harness is `omp` (oh-my-pi); no Pi child harness ships here.
 
 - **Upstream merge policy.** Keep `@earendil-works/*` and `@sinclair/typebox`
   import specifiers in source. omp's plugin loader remaps them to its
@@ -41,6 +41,17 @@ child harness is `omp` (oh-my-pi); no Pi child harness ships here.
   owns (`maestro/adapters/pi/`, `pi-extension/subagents/`,
   `PiHarnessAdapter`, `launchPiSubagent`) stay as they are, so an upstream
   re-merge stays small. Read such names as "the child harness", not "Pi".
+- **Syncing upstream.** `upstream` is `giuseppecrj/pi-herdr-agents`; `origin` is
+  this fork. Pull upstream work with
+  `git fetch upstream && git rebase upstream/main`, then re-run the gates below.
+  Changes under `maestro/core/`, `maestro/surfaces/`, `maestro/runtime/`, `plugins/`
+  and `docs/adr/` normally apply unchanged. Conflicts concentrate in
+  `maestro/adapters/pi/`, `pi-extension/subagents/`, and the package identity, so
+  resolve them toward this fork's contract: child launched with `omp -r
+  <seeded file> --hook …`, settle on `agent_end` without `willContinue`, model
+  attribution from assistant messages, host-supplied config dir name. Never
+  reintroduce the Pi `--session` flag, the `setSessionFile` pin hook, or
+  `agent_settled`.
 - **What is fork-specific.** The npm package name (`omp-herdr-agents`), the
   `omp` manifest block in `package.json`, the shipped skill name
   (`omp-herdr-agents`), the `.omp` config and role namespaces, and the
