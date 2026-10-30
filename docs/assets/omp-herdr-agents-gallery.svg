@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title description">
-  <title id="title">Pi Herdr Agents — parallel agents for Pi</title>
-  <desc id="description">A dark terminal-inspired package banner showing a parent Pi session supervising parallel agents in Herdr: a read-only pane, an isolated worktree, and a retained session.</desc>
+  <title id="title">omp Herdr Agents — parallel agents for omp</title>
+  <desc id="description">A dark terminal-inspired package banner showing a parent omp session supervising parallel agents in Herdr: a read-only pane, an isolated worktree, and a retained session.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#060b13"/>
@@ -35,14 +35,14 @@
     <g transform="translate(88 72)">
       <rect width="220" height="44" rx="22" fill="#ffffff" fill-opacity="0.065" stroke="#ffffff" stroke-opacity="0.14"/>
       <circle cx="25" cy="22" r="5" fill="#55dcff" filter="url(#glow)"/>
-      <text x="43" y="28" fill="#d9e1ea" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700" letter-spacing="2">PI PACKAGE</text>
+      <text x="43" y="28" fill="#d9e1ea" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="700" letter-spacing="2">OMP PACKAGE</text>
     </g>
     <text x="1512" y="101" text-anchor="end" fill="#8591a4" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" letter-spacing="2.5">HERDR NATIVE</text>
 
-    <text x="88" y="238" fill="#f4f7f8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="96" font-weight="760" letter-spacing="-4">Pi</text>
-    <text x="190" y="238" fill="url(#brand)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="96" font-weight="760" letter-spacing="-4">Herdr Agents</text>
+    <text x="88" y="238" fill="#f4f7f8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="96" font-weight="760" letter-spacing="-4">omp</text>
+    <text x="332" y="238" fill="url(#brand)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="96" font-weight="760" letter-spacing="-4">Herdr Agents</text>
     <text x="91" y="304" fill="#d3dae3" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="34" font-weight="520">Parallel agents. One terminal.</text>
-    <text x="92" y="352" fill="#8895a8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="21">Delegate work without blocking the parent Pi session.</text>
+    <text x="92" y="352" fill="#8895a8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="21">Delegate work without blocking the parent omp session.</text>
 
     <g transform="translate(90 401)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" font-weight="700" letter-spacing="1">
       <g><rect width="190" height="42" rx="12" fill="#54d8ff" fill-opacity="0.08" stroke="#54d8ff" stroke-opacity="0.35"/><text x="95" y="27" text-anchor="middle" fill="#83e4ff">ASYNC AGENTS</text></g>
@@ -54,7 +54,7 @@
       <rect width="728" height="266" rx="22" fill="#080d15" fill-opacity="0.96" stroke="#ffffff" stroke-opacity="0.13"/>
       <path d="M0 54H728" stroke="#ffffff" stroke-opacity="0.09"/>
       <circle cx="28" cy="27" r="6" fill="#ff766e"/><circle cx="50" cy="27" r="6" fill="#ffbd73"/><circle cx="72" cy="27" r="6" fill="#59dcae"/>
-      <text x="364" y="33" text-anchor="middle" fill="#6f7a8c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14">pi — subagents</text>
+      <text x="364" y="33" text-anchor="middle" fill="#6f7a8c" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14">omp — subagents</text>
       <text x="30" y="92" fill="#dce4ec" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17">╭─ Subagents ─────────────── 2 active · 1 open ─╮</text>
       <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">
         <text x="31" y="132" fill="#7f8a9a">│ 00:23</text><text x="120" y="132" fill="#eef2f5">Map: auth</text><text x="390" y="132" fill="#71ddff">active · read</text><text x="682" y="132" text-anchor="end" fill="#7f8a9a">7m │</text>
@@ -72,7 +72,7 @@
       <g transform="translate(0 224)" filter="url(#shadow)">
         <rect width="234" height="176" rx="24" fill="#0b111b" stroke="#5ad9ff" stroke-opacity="0.48"/>
         <circle cx="42" cy="44" r="11" fill="#5ad9ff" filter="url(#glow)"/>
-        <text x="67" y="51" fill="#eff4f6" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">PARENT PI</text>
+        <text x="67" y="51" fill="#eff4f6" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700">PARENT OMP</text>
         <path d="M28 76H206" stroke="#ffffff" stroke-opacity="0.09"/>
         <text x="28" y="111" fill="#9ba7b7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14">interactive</text>
         <text x="28" y="141" fill="#71ddff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14">returns immediately</text>
@@ -100,7 +100,7 @@
       <rect width="1424" height="1" fill="#ffffff" fill-opacity="0.1"/>
       <circle cx="10" cy="41" r="6" fill="#59dcae" filter="url(#glow)"/>
       <text x="30" y="47" fill="#d6dde4" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17">non-blocking · supervised · recoverable</text>
-      <text x="1424" y="47" text-anchor="end" fill="#717d90" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">npm:pi-herdr-agents</text>
+      <text x="1424" y="47" text-anchor="end" fill="#717d90" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">npm:omp-herdr-agents</text>
     </g>
   </g>
   <rect x="1" y="1" width="1598" height="898" rx="33" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="2"/>

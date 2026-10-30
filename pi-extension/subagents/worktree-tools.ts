@@ -75,12 +75,18 @@ export function registerWorktreeTools(
 	}
 }
 
-/** The /worktree command: fork into a worktree, list, or remove one. */
+/**
+ * The /subagent-worktree command: fork into a worktree, list, or remove one.
+ *
+ * Not named `/worktree`: omp owns that name (it is the alias of its built-in
+ * `/wt`), and the host silently skips an extension command whose name collides
+ * with a built-in one.
+ */
 export function registerWorktreeCommand(
 	pi: ExtensionAPI,
 	{ runtime, parentSession, cleanupInput, paneConfig }: WorktreeDeps,
 ): void {
-	pi.registerCommand("worktree", {
+	pi.registerCommand("subagent-worktree", {
 		description: parentSession
 			? "Fork into a worktree, list retained worktrees, or explicitly remove one"
 			: "Fork this session into a worktree; use /worktree list to inspect them",

@@ -31,8 +31,10 @@ export function projectTaskModelRegistry(
 				source: source && AUTH_SOURCES.has(source) ? source : undefined,
 			},
 			reasoning: model.reasoning,
-			// SAFETY: the SDK helper reads only reasoning and thinkingLevelMap.
-			// Pass the original active model, not a reconstructed SDK model.
+			// SAFETY: the SDK helper reads the host model's own reasoning
+			// metadata (upstream pi: `reasoning` and `thinkingLevelMap`; `omp`:
+			// `thinking.efforts`). Pass the original active model, not a
+			// reconstructed SDK model.
 			supportedThinkingLevels: getSupportedThinkingLevels(model as Model<any>),
 			input: model.input?.filter(
 				(value) => value === "text" || value === "image",

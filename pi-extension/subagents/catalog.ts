@@ -11,7 +11,7 @@ import {
 } from "../../maestro/core/roles/discovery.ts";
 import { THINKING_LEVELS } from "../../maestro/core/routing.ts";
 import type { TaskPreferences } from "../../maestro/core/config/task-model-types.ts";
-import { getAgentConfigDir } from "./config-path.ts";
+import { getAgentConfigDir, getConfigDirName } from "./config-path.ts";
 
 const LAUNCH_ROSTER_RULE =
 	"After the final launch, print a markdown table with the header row `| name | agent kind | role | model | worktree |`, the separator row `|---|---|---|---|---|`, and one row per child (worktree `none` when there is none), then use each name in prompts, handoffs, and results.";
@@ -47,7 +47,7 @@ const ThinkingLevelSchema = Type.Union(
 	THINKING_LEVELS.map((level) => Type.Literal(level)),
 	{
 		description:
-			"Pi thinking level. Pick the model tier first, then set thinking within that model's range: minimal/low for bounded mechanical work, medium for ordinary implementation or review, high+ for architecture, security, or hard diagnosis. Omitting still inherits the parent level; do not omit on orchestrated child work.",
+			"Thinking level of the child. Pick the model tier first, then set thinking within that model's range: minimal/low for bounded mechanical work, medium for ordinary implementation or review, high+ for architecture, security, or hard diagnosis. Omitting still inherits the parent level; do not omit on orchestrated child work.",
 	},
 );
 
@@ -180,6 +180,8 @@ export function discoverAgentCatalog(
 ): AgentCatalog {
 	return discoverCoreAgentCatalog({
 		agentConfigDir: getAgentConfigDir(),
+		// Role dirs are host-spelled: `.omp/agents` under omp, `.pi/agents` under pi.
+		configDirName: getConfigDirName(),
 		cwd: process.cwd(),
 		onRolePackDiscovered: pi?.events
 			? (event) => pi.events.emit(ROLE_PACK_DISCOVERY_EVENT, event)
@@ -188,7 +190,7 @@ export function discoverAgentCatalog(
 }
 
 export function missingRoleMessage(agentName: string): string {
-	return `Agent "${agentName}" was not found. pi-herdr-agents ships no roles: define it in .pi/agents or the global agents directory, install a role pack that provides it, or omit agent for a bare launch.`;
+	return `Agent "${agentName}" was not found. omp-herdr-agents ships no roles: define it in the project or global agents directory, install a role pack that provides it, or omit agent for a bare launch.`;
 }
 
 function formatAgentSource(agent: ListedAgentDefinition): string {

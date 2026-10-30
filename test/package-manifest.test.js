@@ -47,7 +47,7 @@ const ordinaryReviewClauses = [
 ];
 // Host-owned operational skills are the only shipped skills; workflow skills
 // such as orchestrate and plan belong to role packs.
-const hostSkills = ["pi-herdr-agents"];
+const hostSkills = ["omp-herdr-agents"];
 const hostSkillFiles = new Set(hostSkills.map((n) => `skills/${n}/SKILL.md`));
 const packageFiles = new Set(
 	JSON.parse(
@@ -60,37 +60,63 @@ const packageFiles = new Set(
 
 describe("production package manifest", () => {
 	it("declares the public npm identity and publish metadata", () => {
-		assert.equal(manifest.name, "pi-herdr-agents");
+		assert.equal(manifest.name, "omp-herdr-agents");
 		assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
 		assert.equal(manifest.license, "MIT");
 		assert.equal(manifest.publishConfig?.access, "public");
 		assert.equal(
 			manifest.repository?.url,
-			"git+https://github.com/giuseppecrj/pi-herdr-agents.git",
+			"git+https://github.com/magic3007/omp-herdr-agents.git",
 		);
 		assert.equal(
 			manifest.bugs?.url,
-			"https://github.com/giuseppecrj/pi-herdr-agents/issues",
+			"https://github.com/magic3007/omp-herdr-agents/issues",
 		);
 		assert.equal(
 			manifest.homepage,
-			"https://github.com/giuseppecrj/pi-herdr-agents#readme",
+			"https://github.com/magic3007/omp-herdr-agents#readme",
 		);
 		assert.equal(manifest.author?.name, "Giuseppe Rodriguez");
 		assert.equal(manifest.author?.url, "https://github.com/giuseppecrj");
-		assert.ok(manifest.keywords?.includes("pi-package"));
+		assert.ok(manifest.keywords?.includes("omp-plugin"));
+		assert.ok(manifest.keywords?.includes("omp"));
+		// The upstream pi-only keyword must not survive the fork: it points
+		// package search at a different product.
+		assert.equal(manifest.keywords?.includes("pi-package"), false);
+	});
+
+	it("declares the omp manifest block and no pi one", () => {
+		assert.equal(Object.hasOwn(manifest, "pi"), false);
+		assert.equal(manifest.omp?.name, "omp-herdr-agents");
+		assert.equal(
+			manifest.omp?.description,
+			manifest.description,
+			"the omp block repeats the package description",
+		);
+		assert.deepEqual(manifest.omp?.extensions, [
+			"./pi-extension/subagents/index.ts",
+		]);
+		assert.deepEqual(manifest.omp?.skills, ["./skills"]);
+		assert.equal(Object.hasOwn(manifest.omp ?? {}, "prompts"), false);
+		// An upstream gallery asset URL would render the pi-branded banner.
+		assert.equal(
+			/giuseppecrj|pi-herdr-agents/.test(JSON.stringify(manifest.omp ?? {})),
+			false,
+			"the omp manifest must not point at an upstream asset or product",
+		);
 	});
 });
 
 describe("pack-neutral package contents", () => {
 	it("ships only the extension, with no bundled roles or workflow resources", () => {
-		assert.deepEqual(manifest.pi?.extensions, [
+		assert.deepEqual(manifest.omp?.extensions, [
 			"./pi-extension/subagents/index.ts",
 		]);
-		// An explicit `pi` manifest disables conventional `skills/` discovery, so
+		// An explicit `omp` manifest disables conventional `skills/` discovery, so
 		// the host-owned operational skill must be declared to load at all.
-		assert.deepEqual(manifest.pi?.skills, ["./skills"]);
-		assert.equal(Object.hasOwn(manifest.pi ?? {}, "prompts"), false);
+		assert.deepEqual(manifest.omp?.skills, ["./skills"]);
+		assert.equal(Object.hasOwn(manifest.omp ?? {}, "prompts"), false);
+		assert.equal(Object.hasOwn(manifest, "pi"), false);
 		for (const script of ["format", "format:check", "lint", "test"]) {
 			assert.doesNotMatch(
 				manifest.scripts?.[script] ?? "",

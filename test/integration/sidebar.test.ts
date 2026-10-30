@@ -49,7 +49,7 @@ import { shellQuote } from "../../maestro/core/shell.ts";
 const PLUGIN_DIR = resolve(
 	fileURLToPath(new URL("../../plugins/sidebar", import.meta.url)),
 );
-const PLUGIN_ID = "pi-herdr-agents.sidebar";
+const PLUGIN_ID = "omp-herdr-agents.sidebar";
 const TOKEN = "piha_delegated_v1";
 
 const CONFIG = `onboarding = false

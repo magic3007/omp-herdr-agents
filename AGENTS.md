@@ -1,12 +1,12 @@
 # Repository instructions for agents
 
-These instructions apply to humans and coding agents changing `pi-herdr-agents`.
+These instructions apply to humans and coding agents changing `omp-herdr-agents`.
 
 ## What this package is
 
-`pi-herdr-agents` (Pi Herdr Agents) is a Pi extension that launches asynchronous Pi child agents exclusively in Herdr. Ordinary runs group child panes in extension-owned `Agents` tabs by default. Writing tasks may opt into one isolated Herdr-managed Git worktree per branch. Legacy role definitions that request an external CLI fail before Herdr creates resources.
+`omp-herdr-agents` (omp Herdr Agents) is an omp extension that launches asynchronous omp child agents exclusively in Herdr. Ordinary runs group child panes in extension-owned `Agents` tabs by default. Writing tasks may opt into one isolated Herdr-managed Git worktree per branch. Legacy role definitions that request an external CLI fail before Herdr creates resources.
 
-The package is a pack-neutral execution host: it ships no agent roles and no planning or review workflows. Its only skill is `pi-herdr-agents`, a general operating guide for the host; do not add methodology or workflow skills here. Roles come from project or global definitions and separately installed role packs. Do not add bundled roles, a privileged default pack, or name-keyed workflow behavior; see [ADR-0013](docs/adr/0013-pack-neutral-execution-host.md).
+The package is a pack-neutral execution host: it ships no agent roles and no planning or review workflows. Its only skill is `omp-herdr-agents`, a general operating guide for the host; do not add methodology or workflow skills here. Roles come from project or global definitions and separately installed role packs. Do not add bundled roles, a privileged default pack, or name-keyed workflow behavior; see [ADR-0013](docs/adr/0013-pack-neutral-execution-host.md).
 
 The extension is fire-and-forget: `subagent` returns an acknowledgement, and completion is delivered to the parent automatically. Never add polling guidance that tells callers to sleep, tail sessions, or repeatedly check status.
 
@@ -21,11 +21,40 @@ The extension is fire-and-forget: `subagent` returns an acknowledgement, and com
 - [`docs/worktree-subagents.md`](docs/worktree-subagents.md) — canonical worktree operating, review, recovery, and cleanup guide
 - [`RELEASING.md`](RELEASING.md) — release checks and publishing procedure
 
-Former bundled roles, `/plan`, its plan skill, and `/skill:orchestrate` now belong to the separately maintained `pi-herdr-roles` and `pi-herdr-pstack` packs. `/iterate`, `/btw`, and `/btw-close` were removed. Do not reintroduce them here.
+Former bundled roles, `/plan`, its plan skill, and `/skill:orchestrate` belong to the separately maintained upstream `pi-herdr-roles` and `pi-herdr-pstack` packs, which target the Pi runtime and are not part of this omp-only fork. `/iterate`, `/btw`, and `/btw-close` were removed. Do not reintroduce them here.
+
+## omp-only fork
+
+This repository is an omp-only fork of the upstream `omp-herdr-agents` package. The
+child harness is `omp` (oh-my-pi); no Pi child harness ships here.
+
+- **Upstream merge policy.** Keep `@earendil-works/*` and `@sinclair/typebox`
+  import specifiers in source. omp's plugin loader remaps them to its
+  host-bundled `@oh-my-pi/*` packages, so the same source runs under omp and
+  under plain `node --experimental-strip-types` tests. Renaming the specifiers
+  to `@oh-my-pi/*` would make the sources Bun-only and break that test path.
+- **What was intentionally removed.** The Pi child harness, the Pi session
+  pin hook, and the Pi `agent_settled` settle event. The child now runs `omp`,
+  adopts a seeded session file with `omp -r <file>`, loads its child hook with
+  `--hook`, and settles on omp's `agent_end` when `willContinue` is absent.
+- **What was kept for mergeability.** Directory and file names that upstream
+  owns (`maestro/adapters/pi/`, `pi-extension/subagents/`,
+  `PiHarnessAdapter`, `launchPiSubagent`) stay as they are, so an upstream
+  re-merge stays small. Read such names as "the child harness", not "Pi".
+- **What is fork-specific.** The npm package name (`omp-herdr-agents`), the
+  `omp` manifest block in `package.json`, the shipped skill name
+  (`omp-herdr-agents`), the `.omp` config and role namespaces, and the
+  `/subagent-worktree` command name.
+- **What keeps an upstream name.** The repo-local contributor skill directory
+  `.pi/skills/verify-pi-herdr-agents/` is upstream-owned tooling that this
+  fork did not rename, so this file still links to that path. The upstream
+  `pi-herdr-roles`, `pi-herdr-pstack`, and `pi-herdr-clean-craft` packs, and
+  the upstream `pi-herdr-agents` release history in `CHANGELOG.md`, keep their
+  names because they name other projects and past releases.
 
 ## Code map
 
-- `pi-extension/subagents/index.ts` — Pi composition root: loads config, adopts the reload-surviving runtime, builds the per-load controllers, and registers session handlers, tools, commands, and renderers in order; also the `__test__` surface
+- `pi-extension/subagents/index.ts` — omp composition root: loads config, adopts the reload-surviving runtime, builds the per-load controllers, and registers session handlers, tools, commands, and renderers in order; also the `__test__` surface
 - `pi-extension/subagents/state.ts`, `catalog.ts`, `presentation.ts` — run-state types and reload slots; role catalog, `subagent` parameters, and launch policy; result text and the child-report envelope
 - `pi-extension/subagents/observation.ts`, `widgets.ts`, `controls.ts`, `persistent.ts`, `delivery.ts`, `launch.ts` — per-load controllers (`create*`) for activity observation, the widget and status refresh, interrupt/cancel, persistent specialists, parent delivery, and launch plans
 - `pi-extension/subagents/launch-tools.ts`, `control-tools.ts`, `worktree-tools.ts`, `task-models.ts`, `renderers.ts` — `register*` functions for the public tools, commands, and message renderers
@@ -34,19 +63,20 @@ Former bundled roles, `/plan`, its plan skill, and `/skill:orchestrate` now belo
 - `plugins/sidebar/` — optional standalone Node companion Herdr plugin; it imports nothing from the extension
 - `maestro/core/roles/discovery.ts`, `maestro/core/config/` — role parsing/discovery, injected-directory config loaders, and task-model init prompt construction
 - `maestro/core/worktree.ts`, `worktree-cleanup.ts` — manifest schema/state, handoff types, and cleanup eligibility/formatting
-- `maestro/adapters/pi/` — `PiHarnessAdapter`, launch transactions, completion evidence, session I/O, activity files, SDK model glue, and task-model registry projection
+- `maestro/adapters/pi/` — `PiHarnessAdapter` (the child harness is `omp`), launch transactions, completion evidence, session I/O, activity files, SDK model glue, and task-model registry projection
 - `maestro/adapters/pi/skills.ts` — read-only discovery of a role's declared skills (never loads extensions or installs packages), size caps, and the `<skill>` blocks written into a child's first task artifact
-- `maestro/adapters/pi/child/subagent-done.ts` — child protocol: `caller_ping`, `subagent_done`, and activity recording
+- `maestro/adapters/pi/child/subagent-done.ts` — child protocol: `caller_ping`, `subagent_done`, and activity recording; the settle contract is omp's `agent_end` (final when `willContinue` is absent)
 - `maestro/surfaces/herdr/` — `HerdrSurfaceProvider`, Herdr CLI driver, and terminal scripts/placement, plus `herdr-socket.ts` for socket pane metadata
-- `maestro/runtime/` — `RunSession`, Pi composition, run ownership, controls/retries, observation, delivery-gated cleanup, worktree operations/handoff, and task-model init composition, plus `delegated-marker.ts` for delegated-child sidebar markers
+- `maestro/runtime/` — `RunSession`, omp composition, run ownership, controls/retries, observation, delivery-gated cleanup, worktree operations/handoff, and task-model init composition, plus `delegated-marker.ts` for delegated-child sidebar markers
 - `maestro/adapters/fake/`, `maestro/surfaces/fake/`, `test/maestro/` — conformance fakes, seam tests, and the dependency-rule test
 - `CONTEXT.md` — orchestration-domain glossary
+- `skills/omp-herdr-agents/SKILL.md` — the shipped host operating skill
 - `docs/adr/` — hard-to-reverse architectural decisions; [ADR-0012](docs/adr/0012-adopt-maestro-seams-in-repo.md) records the maestro seams decision
 - `docs/research/` — evidence and alternatives, never the shipped contract
 - `scripts/update-tool-docs.ts`, `scripts/tool-docs.ts` — regenerate `docs/tools.md` blocks and the tool-schema snapshot (`npm run docs:tools`); `test/maestro/tool-schema.test.ts` fails on a breaking change against `test/fixtures/tool-schema/released.json`
 - `test/test.ts` — unit tests for public subagent extension seams
 - `test/package-manifest.test.js` — package manifest and pack-neutral package-content contract test
-- `test/integration/` — real Herdr and Pi lifecycle tests using the deterministic provider by default; `test/integration/agents/` holds test-only role fixtures, including the multi-wave `test-coordinator`
+- `test/integration/` — real Herdr and omp lifecycle tests using the deterministic provider by default; `test/integration/agents/` holds test-only role fixtures, including the multi-wave `test-coordinator`
 - `test/bench/supervision-bench.mjs` — manual isolated-Herdr supervision transport benchmark; raw samples stay in `/tmp/issue29-bench/`
 
 ## Worktree contract
@@ -98,7 +128,7 @@ Do not copy the full worktree guide into every role prompt. Keep canonical detai
 
 ## Verification
 
-Use [`.pi/skills/verify-pi-herdr-agents/SKILL.md`](.pi/skills/verify-pi-herdr-agents/SKILL.md) for which gates each kind of change needs, a real parent-Pi drive in an isolated Herdr lab, refactor behavior pins, and how to judge an integration failure.
+Use [`.pi/skills/verify-pi-herdr-agents/SKILL.md`](.pi/skills/verify-pi-herdr-agents/SKILL.md) for which gates each kind of change needs, a real parent-omp drive in an isolated Herdr lab, refactor behavior pins, and how to judge an integration failure.
 
 For normal changes:
 
@@ -118,7 +148,7 @@ git diff --check
 
 For Herdr or lifecycle changes, run the deterministic suite from inside Herdr. Run only one integration suite at a time on a Herdr instance; concurrent suites compete for terminal focus and process capacity and can cause false timeouts or leaked test resources.
 
-When a test reports that a `pi-integ-*` worktree path already exists, first check whether the same test already created that worktree and the deterministic provider dispatched the tool twice after asynchronous completion. Deterministic providers must make each requested tool call one-shot after its started result appears. Remove only verified test-owned residue after confirming that no workspace or process owns it.
+When a test reports that an `pi-integ-*` worktree path already exists, first check whether the same test already created that worktree and the deterministic provider dispatched the tool twice after asynchronous completion. Deterministic providers must make each requested tool call one-shot after its started result appears. Remove only verified test-owned residue after confirming that no workspace or process owns it.
 
 ```bash
 npm run test:integration
@@ -129,7 +159,7 @@ Use `PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 npm run te
 Before committing:
 
 - inspect `git status` and the final diff;
-- confirm the package preview includes `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/subagents/index.ts`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-agents/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`, plans, journals, sessions, prototypes, generated evidence, local config, and `openspec/`;
+- confirm the package preview includes `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/subagents/index.ts`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/omp-herdr-agents/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`, plans, journals, sessions, prototypes, generated evidence, local config, and `openspec/`;
 - run `npm pack --dry-run` when package contents or documentation paths changed; durable configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, never package-root `config.json` (move old files manually or re-run `/subagents-init`);
 - confirm that no generated plans, journals, sessions, provider configuration, test scripts, or review artifacts are staged; and
 - confirm that no accidental empty directory exists at the repository root:

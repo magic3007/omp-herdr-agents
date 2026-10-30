@@ -308,30 +308,7 @@ describe("Task15 SDK boundary equivalence", () => {
 			]);
 		}
 	});
-	it("pins both full SDK conversion bodies to the original defaults and filter", () => {
-		const original = `function asPiModel(model: RoutingModel): Model<any> {
-	return {
-		provider: model.provider,
-		id: model.id,
-		name: model.id,
-		api: "openai-completions",
-		baseUrl: "",
-		reasoning: model.reasoning,
-		thinkingLevelMap: model.thinkingLevelMap,
-		input: model.input?.filter(
-			(entry): entry is "text" | "image" =>
-				entry === "text" || entry === "image",
-		) ?? ["text"],
-		contextWindow: model.contextWindow ?? 0,
-		maxTokens: model.maxTokens ?? 0,
-		cost: {
-			input: model.cost?.input ?? 0,
-			output: model.cost?.output ?? 0,
-			cacheRead: model.cost?.cacheRead ?? 0,
-			cacheWrite: model.cost?.cacheWrite ?? 0,
-		},
-	};
-}`;
+	it("keeps both SDK conversion bodies on the same defaults and filter", () => {
 		function body(source: string) {
 			const file = ts.createSourceFile(
 				"registry.ts",
@@ -351,16 +328,62 @@ describe("Task15 SDK boundary equivalence", () => {
 				.createPrinter({ removeComments: true })
 				.printNode(ts.EmitHint.Unspecified, declaration.body, file);
 		}
+		// The defaults and the input filter are the contract both wrappers owe
+		// the SDK; the bodies may differ in how they carry host metadata.
+		const required = [
+			"provider: model.provider",
+			"id: model.id",
+			"name: model.id",
+			'api: "openai-completions"',
+			'baseUrl: ""',
+			"reasoning: model.reasoning",
+			"thinkingLevelMap: model.thinkingLevelMap",
+			'entry === "text" || entry === "image"',
+			'?? ["text"]',
+			"contextWindow: model.contextWindow ?? 0",
+			"maxTokens: model.maxTokens ?? 0",
+			"input: model.cost?.input ?? 0",
+			"output: model.cost?.output ?? 0",
+			"cacheRead: model.cost?.cacheRead ?? 0",
+			"cacheWrite: model.cost?.cacheWrite ?? 0",
+		];
 		for (const path of [
 			"../maestro/adapters/pi/model-registry.ts",
 			"../pi-extension/subagents/model-registry.ts",
 		]) {
-			assert.equal(
-				body(readFileSync(new URL(path, import.meta.url), "utf8")),
-				body(original),
-				path,
+			const printed = body(
+				readFileSync(new URL(path, import.meta.url), "utf8"),
 			);
+			for (const fragment of required)
+				assert.ok(printed.includes(fragment), `${path}: ${fragment}`);
 		}
+	});
+	it("keeps the host effort ladder, so an advertised model never clamps to off", () => {
+		// The host model names its supported efforts (`omp`: `thinking.efforts`);
+		// the routing projection drops them, so the adapter keeps them beside
+		// the model it synthesizes for the SDK.
+		const host = {
+			provider: "deepseek",
+			id: "deepseek-flash",
+			reasoning: true,
+			thinking: { mode: "effort", efforts: ["low", "high", "max"] },
+			contextWindow: 128_000,
+			maxTokens: 16_000,
+		};
+		const port = wrapPiModelRegistry({
+			find: () => host,
+			getAvailable: () => [host],
+		});
+		const selected = port.find("deepseek", "deepseek-flash")!;
+		assert.deepEqual(port.supportedThinkingLevels(selected), [
+			"off",
+			"low",
+			"high",
+			"max",
+		]);
+		assert.equal(port.clampThinkingLevel(selected, "low"), "low");
+		assert.equal(port.clampThinkingLevel(selected, "max"), "max");
+		assert.equal(port.clampThinkingLevel(selected, "medium"), "high");
 	});
 });
 

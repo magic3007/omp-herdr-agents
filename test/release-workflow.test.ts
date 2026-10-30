@@ -285,13 +285,13 @@ test("release workflow uses package.json identity and trusted publishing", async
 	const workflow = await readFile(".github/workflows/publish.yml", "utf8");
 	const pkg = JSON.parse(await readFile("package.json", "utf8"));
 
-	assert.equal(pkg.name, "pi-herdr-agents");
+	assert.equal(pkg.name, "omp-herdr-agents");
 	assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
 	assert.match(pkg.scripts.test, /--experimental-strip-types/);
 	assert.match(pkg.scripts["test:integration"], /--experimental-strip-types/);
 	assert.match(workflow, /branches:\n\s+- main/);
 	assert.match(workflow, /paths:\n\s+- package\.json/);
-	assert.match(workflow, /concurrency:\n\s+group: pi-herdr-agents-release/);
+	assert.match(workflow, /concurrency:\n\s+group: omp-herdr-agents-release/);
 	assert.match(workflow, /id-token:\s*write/);
 	assert.match(workflow, /contents:\s*write/);
 	assert.match(workflow, /node-version:\s*26\.12\.1/);

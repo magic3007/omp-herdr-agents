@@ -369,7 +369,7 @@ describe("generated tool docs", () => {
 			for (const form of COMMAND_USAGE[command.name])
 				assert.ok(output.includes(`\`${form}\``), form);
 		}
-		assert.ok(output.includes("`/worktree <name> [task]`"));
+		assert.ok(output.includes("`/subagent-worktree <name> [task]`"));
 	});
 
 	it("fails when a command has no usage entry or usage names an unknown command", () => {

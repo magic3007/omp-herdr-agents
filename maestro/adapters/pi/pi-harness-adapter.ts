@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import type {
 	HarnessAdapter,
 	ResumeOptions,
@@ -42,6 +42,7 @@ import {
 	type ProcessIdentityState,
 } from "./process-identity.ts";
 import {
+	CHILD_CLI,
 	launchOperationsFromSurface,
 	launchPiSubagent,
 	settleBefore,
@@ -117,9 +118,10 @@ interface CompletionWait {
 	waiters: number;
 }
 
-/** Pi's existing launch and child-sidecar protocol behind the harness seam. */
+/** The harness launch and child-sidecar protocol behind the harness seam. */
 export class PiHarnessAdapter implements HarnessAdapter {
-	readonly name = "pi";
+	/** The child harness this adapter drives; recorded on `AgentHandle.harness`. */
+	readonly name = CHILD_CLI;
 	private readonly options: PiHarnessAdapterOptions;
 	private readonly operations: PiLaunchOperations;
 	private readonly children = new Map<string, PiRunningChild>();
@@ -137,7 +139,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 	}
 	isAvailable(): boolean {
 		try {
-			execFileSync("pi", ["--version"], { stdio: "ignore" });
+			execFileSync(CHILD_CLI, ["--version"], { stdio: "ignore" });
 			return true;
 		} catch {
 			return false;
@@ -147,7 +149,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 		this.rejectEnvironment(opts.env);
 		if (opts.worktree && !opts.worktreeRequest)
 			throw new Error(
-				"Pi requires an unprovisioned worktreeRequest; it owns worktree acquisition",
+				`${CHILD_CLI} requires an unprovisioned worktreeRequest; it owns worktree acquisition`,
 			);
 		// One ordinary attempt per spawn; the run session owns retries and their evidence.
 		if (opts.worktreeRequest && opts.runtime?.fallbacks?.length)
@@ -159,7 +161,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 			opts.session.parentSessionId !== this.options.parent.sessionId
 		)
 			throw new Error(
-				"Pi session parent identity does not match the launch parent",
+				`${CHILD_CLI} session parent identity does not match the launch parent`,
 			);
 		const defaults = opts.role.defaults;
 		const persistent =
@@ -273,7 +275,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 			cwd == null && roleCwd != null
 				? (this.options.parent.agentDir ??
 					process.env.PI_CODING_AGENT_DIR ??
-					join(homedir(), ".pi", "agent"))
+					getAgentDir())
 				: (this.options.parent.invocationCwd ?? this.options.parent.cwd);
 		return this.track(
 			child,
@@ -287,10 +289,10 @@ export class PiHarnessAdapter implements HarnessAdapter {
 	async resume(opts: ResumeOptions): Promise<AgentHandle> {
 		this.rejectEnvironment(opts.env);
 		if (opts.surface)
-			throw new Error("Pi public resume owns its new ordinary pane");
+			throw new Error(`${CHILD_CLI} public resume owns its new ordinary pane`);
 		if (opts.tools)
 			throw new Error(
-				"Pi resume restores saved tools; tool overrides are not supported",
+				`${CHILD_CLI} resume restores saved tools; tool overrides are not supported`,
 			);
 		const child = await launchPiSubagent(
 			{
@@ -320,7 +322,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 			handle.harness !== this.name ||
 			handle.sessionId !== child.sessionFile
 		)
-			throw new Error(`Unknown Pi child ${handle.id}`);
+			throw new Error(`Unknown ${CHILD_CLI} child ${handle.id}`);
 		return child;
 	}
 	readPersistentEvents(handle: AgentHandle) {
@@ -433,7 +435,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 			if (!identity) {
 				if (gone) return;
 				throw new Error(
-					`Owned Pi process identity was not captured for retained worktree pane ${child.surface}; nothing was signalled: ${child.processIdentityError ?? (child.processIdentityCapture ? "identity capture is still pending" : "no identity was recorded at launch")}`,
+					`Owned ${CHILD_CLI} process identity was not captured for retained worktree pane ${child.surface}; nothing was signalled: ${child.processIdentityError ?? (child.processIdentityCapture ? "identity capture is still pending" : "no identity was recorded at launch")}`,
 				);
 			}
 		}
@@ -450,7 +452,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 			if (judgeProcessIdentity(verified, probe).kind === "exited")
 				return { kind: "exited" };
 			throw new Error(
-				`Owned Pi process exit unconfirmed in retained worktree pane ${child.surface}: ${after.reason}; process ${verified.pid} was alive when signalled`,
+				`Owned ${CHILD_CLI} process exit unconfirmed in retained worktree pane ${child.surface}: ${after.reason}; process ${verified.pid} was alive when signalled`,
 			);
 		};
 		let state = signal();
@@ -474,7 +476,7 @@ export class PiHarnessAdapter implements HarnessAdapter {
 			state = judgeProcessIdentity(identity, probe);
 		}
 		throw new Error(
-			`Owned Pi process exit unconfirmed in retained worktree pane ${child.surface}: ${describeIdentityState(identity, state, signalled, timeoutMs)}`,
+			`Owned ${CHILD_CLI} process exit unconfirmed in retained worktree pane ${child.surface}: ${describeIdentityState(identity, state, signalled, timeoutMs)}`,
 		);
 	}
 	async readOutput(handle: AgentHandle, lines?: number): Promise<string> {
@@ -679,13 +681,13 @@ export class PiHarnessAdapter implements HarnessAdapter {
 		const thinking = opts.runtime?.thinking ?? opts.role.defaults?.thinking;
 		if (model && thinking) return { ...model, thinking };
 		throw new Error(
-			"Pi launch requires the active parent runtime or explicit model and thinking",
+			`${CHILD_CLI} launch requires the active parent runtime or explicit model and thinking`,
 		);
 	}
 	private rejectEnvironment(env: Record<string, string> | undefined): void {
 		if (env && Object.keys(env).length)
 			throw new Error(
-				"The existing Pi launch protocol does not support per-child environment overrides",
+				`The existing ${CHILD_CLI} launch protocol does not support per-child environment overrides`,
 			);
 	}
 }

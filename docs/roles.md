@@ -4,8 +4,8 @@ This page covers how named roles are found, how to write your own, and how to pu
 
 ## Taxonomy and discovery
 
-This package distinguishes directly runnable **agent roles**, Pi-native
-**skills**, and authenticated Pi **runtimes**. A multi-stage user outcome may
+This package distinguishes directly runnable **agent roles**, host-native
+**skills**, and authenticated host **runtimes**. A multi-stage user outcome may
 be a command or skill that composes roles; it is not itself an agent role.
 
 The host's own orchestration surfaces are:
@@ -13,7 +13,7 @@ The host's own orchestration surfaces are:
 | Surface | Entry point | Behavior |
 | --- | --- | --- |
 | Delegation | `subagent`, `/subagent <agent> <task>` | Launches one bare or named child; results return automatically. |
-| Worktree handoff | `/worktree <name> [task]`, `/worktree list` | Forks the active conversation into a managed worktree. |
+| Worktree handoff | `/subagent-worktree <name> [task]`, `/subagent-worktree list` | Forks the active conversation into a managed worktree. |
 
 Planning, review, and other multi-stage workflows belong to role packs and
 skills, not to this package. See
@@ -25,17 +25,17 @@ skills, not to this package. See
 
 This package is a pack-neutral execution host: it ships no agent roles, no
 `/plan` command, and no planning or review skills. Its one skill,
-`pi-herdr-agents`, is a general operating guide for the host. A named launch resolves
+`omp-herdr-agents`, is a general operating guide for the host. A named launch resolves
 `agent` from project definitions, global definitions, and roles registered by
 installed role packs, in that precedence order (see below). An empty catalog is
 valid. A bare launch without `agent` always works. An explicitly named role that
 is missing or invalid fails before Herdr creates a pane or worktree; it is never
 silently replaced by a bare agent.
 
-All subagents execute through Pi. Claude models remain available through normal
-Pi provider/model routing. Legacy role definitions that contain `cli` fail before
+All subagents execute through omp. Claude models remain available through normal
+omp provider/model routing. Legacy role definitions that contain `cli` fail before
 Herdr creates a pane or worktree; remove `cli` and `cli-model`, then select an
-authenticated Pi `provider/model-id`.
+authenticated omp `provider/model-id`.
 
 Role packs own their roles' prerequisites, such as a required skill, and must
 document them. This package does not install role packs or prerequisites.
@@ -59,10 +59,11 @@ independent review. Family is the independence boundary; project policy may
 separately require a different provider.
 
 Discovery loads definitions in **package → global → project** order, so effective
-priority remains **project** (`.pi/agents/`) > **global**
-(`$PI_CODING_AGENT_DIR/agents/`, defaulting to `~/.pi/agent/agents/`) >
-**package**. Package definitions are the roles contributed by installed Pi role
-packs; there is no bundled layer. Both `subagents_list` and `/subagent list` show each
+priority remains **project** (`<cwd>/.omp/agents/`) > **global**
+(`$PI_CODING_AGENT_DIR/agents/`, defaulting to `~/.omp/agent/agents/`) >
+**package**. The project and global directory names come from the host runtime:
+`.omp/agents` under omp, `.pi/agents` under the Pi SDK. Package definitions are
+the roles contributed by installed omp role packs; there is no bundled layer. Both `subagents_list` and `/subagent list` show each
 visible definition's source; contributed roles include their package identity,
 for example `(package:@acme/security-roles)`. A hidden higher-priority definition
 still suppresses a visible lower-priority definition.
@@ -76,16 +77,16 @@ launch workflow.
 Custom agent roles are the package's primary extension mechanism. Create one
 when a child needs a reusable, bounded responsibility such as scouting,
 implementation, or review. If the new concept instead describes a multi-stage
-user outcome, make it a workflow, command, or Pi skill that composes roles; do
+user outcome, make it a workflow, command, or host skill that composes roles; do
 not disguise a workflow as an agent definition.
 
 ### 1. Choose the scope
 
 | Scope | Location | Use when |
 | ----- | -------- | -------- |
-| Project | `.pi/agents/<name>.md` | The role belongs to one repository |
-| Global | `$PI_CODING_AGENT_DIR/agents/<name>.md` | The role should be available everywhere; the default root is `~/.pi/agent` |
-| Role pack | An installed Pi package's registered `roles/` directory | The role should be independently installable and shareable |
+| Project | `<cwd>/.omp/agents/<name>.md` | The role belongs to one repository |
+| Global | `$PI_CODING_AGENT_DIR/agents/<name>.md` | The role should be available everywhere; the default root is `~/.omp/agent` |
+| Role pack | An installed omp plugin's registered `roles/` directory | The role should be independently installable and shareable |
 
 The filename stem is the launch key. `name` frontmatter is optional because it
 defaults to the filename stem. If supplied, keep it identical so overrides remain
@@ -115,44 +116,44 @@ Omit `model` to use `models.agents.<name>`, then `models.default`, then the
 parent model. Put `model` in frontmatter only when the role itself needs a
 specific exact authenticated `provider/model-id`.
 
-`tools` is passed to Pi's `--tools` allowlist and may name any registered
+`tools` is passed to the host's `--tools` allowlist and may name any registered
 built-in, extension, or custom tool. Listing a tool does not install its
 extension. Use one non-empty inline comma-separated scalar, such as
 `tools: read, grep`; do not use YAML lists, containers, quotes, or comments.
 Omitting `tools` intentionally leaves the role unrestricted. Likewise, `skills`
-names must already be discoverable by Pi; this package does not install role
+names must already be discoverable by the host; this package does not install role
 prerequisites.
 
 #### How declared skills reach the child
 
 The host reads each declared skill's `SKILL.md` and writes its instructions,
-in the `<skill>` block Pi uses for `/skill:name`, at the top of the child's
+in the `<skill>` block the host uses for `/skill:name`, at the top of the child's
 first task, always through the task artifact file, never on the command line
 (fork launches included). Names are matched exactly against the skills found
 on disk. A name is never turned into a path, so `../x` or an absolute path
 matches nothing. Repeated names are delivered once.
 
 Discovery only reads files. It never loads extensions, installs packages or
-starts processes. It searches the directories Pi searches, in Pi's order (the
+starts processes. It searches the directories the host searches, in the host's order (the
 first skill with a name wins):
 
-1. plain-path `skills` entries in `<cwd>/.pi/settings.json`;
-2. `<cwd>/.pi/skills`, and `.agents/skills` in the child's cwd and each
+1. plain-path `skills` entries in `<cwd>/.omp/settings.json`;
+2. `<cwd>/.omp/skills`, and `.agents/skills` in the child's cwd and each
    parent folder up to the Git root;
 3. plain-path `skills` entries in `<agentDir>/settings.json`;
 4. `<agentDir>/skills` and `~/.agents/skills`;
-5. skills of configured `packages` that are already installed under Pi's
+5. skills of configured `packages` that are already installed under the host's
    install folders (`npm/node_modules/<name>`, `git/<host>/<path>`, or a local
    path). A package that is not installed there is skipped, never installed.
 
 `<cwd>` and `<agentDir>` are the child's own, so a worktree child sees its
 checkout's skills. Project sources (1, 2 and project packages) count only when
-Pi would trust the project without asking: no trust-requiring project files,
+The host loads project skills without a trust gate: no trust-requiring project files,
 a saved trust decision, or `defaultProjectTrust: "always"`. Settings patterns
 (`!`, `+`, `-`, globs) are not expanded.
 
 A declared skill that is not found does not stop the launch, which matches
-Pi's own handling of an unknown `/skill:name`. The launch acknowledgement
+The host's own handling of an unknown `/skill:name`. The launch acknowledgement
 lists it under launch diagnostics, together with any project or package that
 was not searched, and the task tells the child it was not loaded. A skill whose
 `SKILL.md` is over 64 KiB, or declared skills totalling over 256 KiB, refuse
@@ -177,13 +178,13 @@ subagent({
 ```
 
 Agent files are read when definitions are listed or launched, so creating or
-editing one normally does not require `/reload`. Installing, removing, updating,
-or changing the extension code of a role pack uses Pi's normal `/reload` flow.
+editing one normally does not require a session restart. Installing, removing, updating,
+or changing the extension code of a role pack uses the host's normal reload flow.
 
 ### Publish a role pack
 
-A role pack is an ordinary Pi package with Markdown definitions and a tiny
-extension that registers their directory through Pi's public inter-extension
+A role pack is an ordinary omp plugin with Markdown definitions and a tiny
+extension that registers their directory through the host's public inter-extension
 event bus:
 
 ```text
@@ -198,9 +199,9 @@ security-roles/
 {
   "name": "@acme/security-roles",
   "version": "1.0.0",
-  "keywords": ["pi-package"],
+  "keywords": ["omp-plugin"],
   "type": "module",
-  "pi": {
+  "omp": {
     "extensions": ["./extension.ts"]
   },
   "peerDependencies": {
@@ -225,12 +226,12 @@ export default (pi: any) => {
 };
 ```
 
-Install both packages through Pi; the role pack remains inert if
-`pi-herdr-agents` is absent:
+Install both plugins through omp; the role pack remains inert if
+`omp-herdr-agents` is absent:
 
 ```bash
-pi install npm:pi-herdr-agents
-pi install npm:@acme/security-roles
+omp plugin install npm:omp-herdr-agents
+omp plugin install npm:@acme/security-roles
 ```
 
 Registration is synchronous and accepts one absolute Markdown file or a
@@ -279,19 +280,19 @@ Compare definitions against the reference below and verify them with
 | ------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`        | string  | Optional explicit agent name used in `agent: "my-agent"`; defaults to the filename stem and must match it in role packs                                                                                                                                                                                            |
 | `description` | string  | Shown in `subagents_list` output                                                                                                                                                                                                                                            |
-| `model`       | string  | Optional exact authenticated Pi model default or ordered comma-separated fallback list; omit to use per-agent config, global config, then the parent                                                                                                                       |
-| `thinking`    | string  | Optional Pi thinking default (`off` through `max`); omit to inherit the parent                                                                                                                                   |
-| `system-prompt` | string | `append` passes the agent body through Pi's appended system prompt; `replace` replaces Pi's default system prompt. Without this field, the body is included in the task wrapper                                                                                                                                                                                                                                 |
-| `tools`       | string  | One non-empty inline comma-separated Pi `--tools` allowlist under the exact unquoted key `tools:`; may contain any registered built-in, extension, or custom tool name. Omit to leave unrestricted. YAML lists, containers, multiline values, quotes, comments, noncanonical keys, and duplicates are rejected. |
+| `model`       | string  | Optional exact authenticated omp model default or ordered comma-separated fallback list; omit to use per-agent config, global config, then the parent                                                                                                                       |
+| `thinking`    | string  | Optional omp thinking default (`off` through `max`); omit to inherit the parent                                                                                                                                   |
+| `system-prompt` | string | `append` passes the agent body through the host's appended system prompt; `replace` replaces the host's default system prompt. Without this field, the body is included in the task wrapper                                                                                                                                                                                                                                 |
+| `tools`       | string  | One non-empty inline comma-separated host `--tools` allowlist under the exact unquoted key `tools:`; may contain any registered built-in, extension, or custom tool name. Omit to leave unrestricted. YAML lists, containers, multiline values, quotes, comments, noncanonical keys, and duplicates are rejected. |
 | `skills`      | string  | Comma-separated installed skill names delivered at the top of the child's first task (see [How declared skills reach the child](#how-declared-skills-reach-the-child)); not found skills are reported, oversize ones refuse the launch. Use this plural form for new definitions; legacy project/global definitions using singular `skill` remain compatible. |
 | `session-mode` | string | Default child-session mode: `standalone`, `lineage-only`, or `fork` |
 | `spawning`    | boolean | Set exactly `false` to deny all subagent-spawning tools under the exact unquoted key `spawning:`. Only one `true` or `false` declaration is accepted. |
 | `self-spawn`  | boolean | Set exactly `true` under the exact unquoted key `self-spawn:` to let a child of this role launch another instance of the same role. Absent or `false` keeps the default, which blocks it. `spawning: false` still denies all spawning and wins. Only one `true` or `false` declaration is accepted. |
-| `deny-tools`  | string  | One non-empty inline comma-separated `pi-herdr-agents` tool list to suppress under the exact unquoted key `deny-tools:`; this is not a universal cross-extension deny list. YAML lists, containers, multiline values, quotes, comments, noncanonical keys, and duplicates are rejected. |
-| `auto-exit`   | boolean | Auto-shutdown after Pi fully settles when the latest assistant turn does not end with `stopReason: "aborted"` — no `subagent_done` call needed. If the child launched subagents whose results have not been delivered to it yet, the shutdown waits for them. User input does not permanently disable auto-exit. Recommended for autonomous roles; not for interactive ones the user drives. Also determines the default value of `interactive` (see below). |
+| `deny-tools`  | string  | One non-empty inline comma-separated `omp-herdr-agents` tool list to suppress under the exact unquoted key `deny-tools:`; this is not a universal cross-extension deny list. YAML lists, containers, multiline values, quotes, comments, noncanonical keys, and duplicates are rejected. |
+| `auto-exit`   | boolean | Auto-shutdown after the host fully settles when the latest assistant turn does not end with `stopReason: "aborted"` — no `subagent_done` call needed. If the child launched subagents whose results have not been delivered to it yet, the shutdown waits for them. User input does not permanently disable auto-exit. Recommended for autonomous roles; not for interactive ones the user drives. Also determines the default value of `interactive` (see below). |
 | `interactive` | boolean | Override whether stall/recovery transitions wake the parent session. Defaults to the inverse of `auto-exit`: autonomous agents (`auto-exit: true`) are non-interactive and get stall pings; agents without `auto-exit` are interactive and stay quiet. Explicit values take precedence. |
 | `persistent` | boolean | Keep this role's specialist session open between tasks. Follow-up work uses `subagent_send`; persistent specialists cannot be resumed in v1. |
-| `cwd`         | string  | Default working directory. Absolute paths are unambiguous; relative agent-frontmatter paths resolve from Pi's agent config directory (`PI_CODING_AGENT_DIR` or `~/.pi/agent`), not the project root                                                                                                                                                                                                            |
+| `cwd`         | string  | Default working directory. Absolute paths are unambiguous; relative agent-frontmatter paths resolve from the host's agent config directory (`PI_CODING_AGENT_DIR` or `~/.omp/agent`), not the project root                                                                                                                                                                                                            |
 | `disable-model-invocation` | boolean | Hide a role from discovery surfaces like `subagents_list`. The definition remains directly invocable by exact name via `subagent({ agent: "name", ... })`. |
 
 ---
@@ -319,12 +320,12 @@ session-mode: lineage-only
 
 ### `auto-exit`
 
-When set to `true`, the agent session shuts down on Pi's `agent_settled` event unless the latest assistant message has `stopReason: "aborted"` — no explicit `subagent_done` call is needed.
+When set to `true`, the agent session shuts down on the host's settle event (omp's `agent_end` with `willContinue` absent) unless the latest assistant message has `stopReason: "aborted"` — no explicit `subagent_done` call is needed.
 
 **Behavior:**
 
-- Low-level `agent_end` events do not close the session because Pi may still retry, compact and retry, or process a queued continuation.
-- After `agent_settled`, a normal or error stop exits, while an aborted stop stays open.
+- A low-level `agent_end` event does not close the session by itself: an automatic retry, fallback, compaction, or a queued continuation still follows.
+- After the settle event, a normal or error stop exits, while an aborted stop stays open.
 - A normal stop does not exit while the child still has launched subagents whose result, help request, or cancellation has not been delivered to it. Delivery steers a new turn into the child; once the last one has been delivered and the turn settles normally, the child exits. A child that launched nothing is unaffected, a settled error still exits and is reported, and persistent specialists never hold the exit. The child therefore needs no `subagent_done` call to collect its children's results.
 - User input does not permanently disable auto-exit; the latest settled assistant stop reason determines whether the session exits.
 - The modeHint injected into the agent's task is adjusted accordingly: autonomous agents see "Complete your task autonomously." rather than instructions to call `subagent_done`
@@ -415,7 +416,7 @@ its own definition again. Notes:
   depth 0 and each launch adds one; by default nothing deeper than depth 3 can be
   launched (parent 0, children 1, grandchildren 2, great-grandchildren 3). A
   session at the limit gets a refusal from `subagent`, `subagent_resume`,
-  `/subagent`, and `/worktree`, so an untrusted role that opts in cannot recurse
+  `/subagent`, and `/subagent-worktree`, so an untrusted role that opts in cannot recurse
   without bound. Change the limit with `spawning.maxDepth` in
   [`config.json`](configuration.md#delegation-depth-limit). The limit counts
   depth, not breadth: one session can still launch several children, so bound the
@@ -427,7 +428,7 @@ its own definition again. Notes:
 
 ### `deny-tools`
 
-Fine-grained control over tools registered by `pi-herdr-agents`:
+Fine-grained control over tools registered by `omp-herdr-agents`:
 
 ```yaml
 ---
@@ -460,7 +461,7 @@ project/
 │   │   └── CLAUDE.md          ← "You are a game designer..."
 │   ├── sre/
 │   │   ├── CLAUDE.md          ← "You are an SRE specialist..."
-│   │   └── .pi/skills/        ← SRE-specific skills
+│   │   └── .omp/skills/        ← SRE-specific skills
 │   └── narrative/
 │       └── CLAUDE.md          ← "You are a narrative designer..."
 ```
@@ -470,7 +471,7 @@ subagent({ name: "Game Designer", cwd: "agents/game-designer", task: "Design the
 subagent({ name: "SRE", cwd: "agents/sre", task: "Review deployment pipeline" });
 ```
 
-Set a default `cwd` in agent frontmatter. Use an absolute path for a project directory; relative frontmatter paths are resolved from Pi's agent config directory:
+Set a default `cwd` in agent frontmatter. Use an absolute path for a project directory; relative frontmatter paths are resolved from the host's agent config directory:
 
 ```yaml
 ---

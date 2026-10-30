@@ -10,7 +10,7 @@
 
 ## Problem
 
-A delegated child "completes" when its Pi session stops. The host then delivers
+A delegated child "completes" when its omp session stops. The host then delivers
 the child's last assistant message to the parent. Nothing checks the work.
 
 The glossary already says so. A child result delivery "does not establish that
@@ -188,9 +188,9 @@ flowchart TD
 ### Child loop
 
 An `agent_settled` handler that calls `pi.sendUserMessage` looks like the
-obvious place for the loop. Pi documents `agent_settled` as notification-only, and
+obvious place for the loop. The Pi SDK documents `agent_settled` as notification-only, and
 `agent_before_settle` as the hook that may "append entries or request one final
-continuation" (Pi 1.4.0 `docs/extensions.md`, "Choose an event by intent"). The
+continuation" (Pi SDK 1.4.0 `docs/extensions.md`, "Choose an event by intent"). The
 current `agent_settled` handler is also synchronous
 (`subagent-done.ts:261-317`). The loop therefore belongs in a new
 `agent_before_settle` handler:
@@ -205,10 +205,10 @@ current `agent_settled` handler is also synchronous
 5. On failure with no retries left, record `childVerdict: "failed"` and return
    nothing.
 
-Pi awaits boundary handlers and continues when the final context does not end
+The host awaits boundary handlers and continues when the final context does not end
 in an assistant message. A pending custom message satisfies that
 (`@earendil-works/pi-coding-agent` 1.1.0 `dist/core/agent-session.js:616-634`
-and `1452-1474`, the version in this repository's `node_modules`). Pi then
+and `1452-1474`, the version in this repository's `node_modules`). The host then
 settles normally, and the existing `agent_settled` handler writes the sidecar
 with the recorded fields (`subagent-done.ts:299-313`).
 
@@ -253,7 +253,7 @@ can finalize at once in one parent process.
 | 1. Test tampering | (a) Run the parent's copy of the check files. (b) Record and show check files the child changed. (c) Both. | (b) for the first version. Show changed files on the `Check:` line, keep the verdict. | (a) means writing base copies into the child's checkout, which breaks the reviewable worktree state. (b) is free for worktrees because the handoff already lists every changed and untracked file since `baseSha` (`maestro/runtime/worktree-operations.ts:155-165`). The caller decides what a changed test means. |
 | 2. Timeout and output cap | Fixed or per-call timeout. Keep full or capped output. | `timeoutSec` default 600, max 3600. Kill the process group with SIGTERM, then SIGKILL after 5 seconds. Keep 64 KiB while running. Send the child 4,000 characters and the parent 1,500. | A hung test suite must not hold a run open forever. A timeout is `error`, not `rejected`, because the check never answered. |
 | 3. Where the re-check runs | Worktree path or a fresh detached checkout. For ordinary children, the shared cwd. | Worktree children use the worktree path. Ordinary children use their cwd and the `Check:` line notes `shared checkout`. | A worktree holds only that child's work. A shared checkout can hold edits from other children and the user. A re-check there tests the checkout as it is, not one child's work, and can fail while another writer is mid-edit. Parallel writers already belong in worktrees. |
-| 4. Security | Sandbox the check. Run with user permissions. | Run with the user's permissions, like any child `bash` call. Never write environment values to the ledger or delivery. Remove `PI_SUBAGENT_*` from the check's environment. | The caller already controls the child's task and tools. A sandbox would add a platform-specific layer for no new boundary. Removing `PI_SUBAGENT_*` stops a nested Pi in the check from acting as a child. |
+| 4. Security | Sandbox the check. Run with user permissions. | Run with the user's permissions, like any child `bash` call. Never write environment values to the ledger or delivery. Remove `PI_SUBAGENT_*` from the check's environment. | The caller already controls the child's task and tools. A sandbox would add a platform-specific layer for no new boundary. Removing `PI_SUBAGENT_*` stops a nested omp in the check from acting as a child. |
 | 5. Cancel, fork, persistent, resume, fallback | See [Interactions](#interactions). | Cancelled runs are `skipped`. Resume and persistent carry no check. Fallback never triggers on a verdict. | Each follows an existing rule rather than a new one. |
 | 6. Verdict set | Open string or closed set. | Closed set: `accepted`, `rejected`, `error`, `skipped`, `none`. | A pack can branch on five known values. A sixth value is a contract change and needs a docs update. |
 | 7. Unchecked runs in text | Print `Check: none` or nothing. | Print `Check: none`. | The point is that an unchecked result reads as unchecked. The cost is a changed delivery text for every run and its test fixtures. |
@@ -282,12 +282,12 @@ can finalize at once in one parent process.
 - **Missing sidecar.** When completion comes from the terminal sentinel
   (`completion.ts:146-164`) with exit 0, the child verdict is unknown. The
   parent re-check still runs and decides.
-- **`/worktree` handoff.** A handoff Pi loads no child protocol extension
+- **`/subagent-worktree` handoff.** A handoff omp loads no child protocol extension
   (`launch.ts:719`), so it never carries a check.
 
 ## Compatibility
 
-**Herdr 1 now, hc later.** The child check runs inside the Pi process. The
+**Herdr 1 now, hc later.** The child check runs inside the omp process. The
 parent re-check is a local process started from `finalize`. The verdict travels
 in the `.exit` file beside the session, and the ledger is a local file. None of
 these read panes, terminal text, or Herdr state, so a move to hc changes none of
@@ -312,7 +312,7 @@ once they pass `accept`.
   a narrower "child result delivery" entry;
 - `docs/worktree-subagents.md`, because the re-check runs in the worktree after
   handoff capture;
-- `skills/pi-herdr-agents/SKILL.md`, for how to pass a check;
+- `skills/omp-herdr-agents/SKILL.md`, for how to pass a check;
 - `docs/troubleshooting.md`, for timeouts and `error` verdicts;
 - `docs/README.md`, which at this commit has no section for proposed design. It
   needs one to list this note.
@@ -413,8 +413,8 @@ open questions.
   child records no activity then. The activity recorder may need a "checking"
   event.
 - How does a user abort (Escape) during the child check interact with
-  `agent_before_settle`? Pi sets an abort flag there
-  (`agent-session.js:1462-1463` in Pi 1.1.0), but whether boundary handlers
+  `agent_before_settle`? The Pi SDK sets an abort flag there
+  (`agent-session.js:1462-1463` in the Pi SDK 1.1.0), but whether boundary handlers
   receive a signal needs a test.
 - The ledger has no rotation. It grows by one short line per attempt.
 - Should the ledger record the project, for example a hash of the repository

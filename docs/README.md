@@ -26,9 +26,9 @@ are evidence, not shipped contracts, when a later ADR supersedes them.
   optional Herdr sidebar plugin: installation, Focus and All, the delegated
   marker contract, and its staleness limits.
 
-The package runs asynchronous Pi children in Herdr and supports managed
+The package runs asynchronous omp children in Herdr and supports managed
 worktrees for writing tasks. It ships the
-[`pi-herdr-agents` operating skill](../skills/pi-herdr-agents/SKILL.md), but no
+[`omp-herdr-agents` operating skill](../skills/omp-herdr-agents/SKILL.md), but no
 agent roles or planning and review workflows. Project definitions, global
 definitions, and installed role packs provide roles
 ([ADR-0013](adr/0013-pack-neutral-execution-host.md)). A `read,bash` tool
@@ -43,15 +43,15 @@ Herdr integration remains a local release gate.
 architecture decision.
 
 - `../maestro/core/` — harness-neutral interfaces, domain rules, roles, and config.
-- `../maestro/adapters/pi/` — Pi harness and child protocol.
+- `../maestro/adapters/pi/` — omp harness and child protocol.
 - `../maestro/surfaces/herdr/` — Herdr provider and CLI driver.
-- `../maestro/runtime/` — run ownership and real Pi/Herdr composition.
-- `../pi-extension/subagents/index.ts` — Pi host entry point;
+- `../maestro/runtime/` — run ownership and real omp/Herdr composition.
+- `../pi-extension/subagents/index.ts` — omp host entry point;
   `model-registry.ts` and `config-path.ts` remain permanent host-local owners.
 - `../test/maestro/` — seam conformance and dependency-rule tests; real
   conformance runs in `../test/integration/`.
 
-See the [full code map](development.md#code-map). Pi and Herdr remain the only
+See the [full code map](development.md#code-map). omp and Herdr remain the only
 real implementations; in-memory fakes are conformance fixtures only.
 
 ## ADRs
@@ -59,17 +59,17 @@ real implementations; in-memory fakes are conformance fixtures only.
 | ADR | Status | Decision |
 | --- | --- | --- |
 | [`0001`](adr/0001-btw-ephemeral-side-questions.md) | Superseded by 0013 | Historical `/btw` side-question decision; the command was removed. |
-| [`0002`](adr/0002-agent-workflow-skill-runtime-taxonomy.md) | Partially superseded by 0009 and 0013 | Keep agent execution, skills, and Pi runtimes distinct. |
+| [`0002`](adr/0002-agent-workflow-skill-runtime-taxonomy.md) | Partially superseded by 0009 and 0013 | Keep agent execution, skills, and Pi runtimes distinct (upstream wording; this fork runs the omp harness). |
 | [`0003`](adr/0003-installable-role-packs.md) | Accepted; bundled layer superseded by 0013 | Define installable role-pack discovery and collision rules. |
 | [`0004`](adr/0004-require-active-user-approval-for-workflow-execution.md) | Superseded by 0009 | Historical exact-script approval decision. |
 | [`0005`](adr/0005-parent-owns-workflow-script-authority.md) | Superseded by 0009 | Historical workflow-script authority decision. |
 | [`0006`](adr/0006-limit-v1-execution-effects-to-isolated-worktrees.md) | Partially superseded by 0009 | Historical runner effect boundary; managed worktree rules remain. |
 | [`0007`](adr/0007-require-fresh-review-for-workflow-scripts.md) | Superseded by 0009 | Historical workflow-review decision. |
-| [`0008`](adr/0008-adopt-pi-only-subagent-execution.md) | Partially superseded by 0012 | Keep Pi-only execution; 0012 supersedes only the adapter-seam restriction. |
+| [`0008`](adr/0008-adopt-pi-only-subagent-execution.md) | Partially superseded by 0012 | Keep single-harness execution; 0012 supersedes only the adapter-seam restriction. |
 | [`0009`](adr/0009-remove-workflow-subsystem.md) | Accepted; skill ownership moved by 0013 | Remove the workflow subsystem; use public subagent fan-out and parent synthesis. |
 | [`0010`](adr/0010-persistent-specialists-as-session-generations.md) | Accepted | Define persistent specialists as logical identities with policy-bound session generations. |
 | [`0011`](adr/0011-explicit-worktree-cleanup.md) | Accepted; amended by 0015 | Authorize explicit worktree cleanup by cwd containment; retain branches and reject automatic reaping. |
-| [`0012`](adr/0012-adopt-maestro-seams-in-repo.md) | Accepted | Adopt in-repo seams and conformance fakes; keep one package, Pi-only execution, and Herdr-only surfaces. |
+| [`0012`](adr/0012-adopt-maestro-seams-in-repo.md) | Accepted | Adopt in-repo seams and conformance fakes; keep one package, single-harness execution, and Herdr-only surfaces. |
 | [`0013`](adr/0013-pack-neutral-execution-host.md) | Accepted | Ship a pack-neutral execution host; roles and workflows move to optional packs, and `/iterate` and `/btw` are removed. |
 | [`0014`](adr/0014-operator-cancel-terminal-intent.md) | Accepted | Operator cancel records terminal intent before owned termination: no fallback, one confirmed cancelled result, unconfirmed runs stay live. |
 | [`0015`](adr/0015-report-opened-primary-workspace.md) | Accepted | Report, and never automatically close, a primary workspace that worktree creation opened. |
@@ -88,6 +88,6 @@ the code and the shipped-contract documents above change.
 
 - [`orchestrated-review-workflow-plan.md`](orchestrated-review-workflow-plan.md)
   — superseded workflow design, retained as history. Its `skills/orchestrate`
-  and review-evaluation paths now belong to the `pi-herdr-roles` pack.
+  and review-evaluation paths now belong to the upstream `pi-herdr-roles` pack.
 - [`research/`](research/) — background evidence and alternatives, not shipped
   behavior.

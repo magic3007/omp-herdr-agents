@@ -2,16 +2,16 @@
 
 ## Language
 
-**Pi subagent runtime**:
+**omp subagent runtime**:
 The single real execution path for fresh and resumed children, coordinated by a
-run session through the Pi harness adapter. `launchPiSubagent()` still owns each
-complete launch transaction; completion uses Pi sidecar evidence first and the
+run session through the omp harness adapter. `launchPiSubagent()` still owns each
+complete launch transaction; completion uses the child sidecar evidence first and the
 terminal exit marker as fallback.
 _Avoid_: Runtime dispatch, adapter registry, split launch ownership
 
 **Harness adapter**:
 An object implementing the core interface for child launch, observation,
-completion evidence, and controls. Pi is the only real implementation; the fake
+completion evidence, and controls. omp is the only real implementation; the fake
 is for conformance tests.
 _Avoid_: Runtime selector, adapter registry, external CLI compatibility
 
@@ -23,25 +23,25 @@ _Avoid_: Supported multiplexer catalog, harness adapter, security sandbox
 
 **Run session**:
 The runtime owner coordinating launched attempts, retries, observations,
-settlement, and delivery-gated surface cleanup. Pi composition supplies the
+settlement, and delivery-gated surface cleanup. The omp composition supplies the
 real adapter, provider, and session I/O.
-_Avoid_: Pi session file, persistent specialist identity, historical run registry
+_Avoid_: omp session file, persistent specialist identity, historical run registry
 
 **Composition root**:
-The Pi host entry point that registers tools and commands, supplies current
+The omp host entry point that registers tools and commands, supplies current
 launch inputs and host policy, renders status, and delivers parent results.
 Runtime composition constructs adapters and providers behind its operations.
 _Avoid_: Direct adapter dispatch, duplicated launch owner, workflow engine
 
 **Dependency rule**:
 The test-enforced import boundaries between core, adapters, surfaces, runtime,
-and the Pi host. Core stays harness-neutral; the host consumes core and runtime
+and the omp host. Core stays harness-neutral; the host consumes core and runtime
 without direct adapter or surface imports.
 _Avoid_: Runtime authorization, package split, hidden compatibility re-export
 
 **Conformance suite**:
 Shared seam-contract tests applied to an in-memory fake and the real
-implementation. Fake coverage is local; real Pi and Herdr coverage uses the
+implementation. Fake coverage is local; real omp and Herdr coverage uses the
 deterministic integration suite.
 _Avoid_: Second supported harness, fake-only behavior proof, release certification
 
@@ -83,7 +83,7 @@ specialists never count.
 _Avoid_: Manual `subagent_done` for nested children, exit hold, polling for results
 
 **Process identity**:
-A child's Pi process named by immutable kernel facts (PID, start time, boot,
+A child's omp process named by immutable kernel facts (PID, start time, boot,
 and PID namespace), recorded by the child at launch and verified by the parent
 against the Herdr pane. Every managed worktree child records it. A worktree
 cancel signals and judges exit only by it. It reads Linux `/proc`.
@@ -96,21 +96,21 @@ the child's own session file as the pane's agent session within the last 15
 seconds, not that the child is alive when Herdr draws the row. One stable
 source, a 15-second TTL, and increasing sequence numbers bound a leftover
 marker; each renewal first rereads that agent session from Herdr. A
-`/worktree` handoff is never marked.
+`/subagent-worktree` handoff is never marked.
 _Avoid_: liveness proof, ownership record, security boundary, per-run source, process identity
 
 **Sidebar Focus**:
-The Herdr agent view that the optional `pi-herdr-agents.sidebar` plugin sets
+The Herdr agent view that the optional `omp-herdr-agents.sidebar` plugin sets
 by default and on request. Hooks re-apply it unless the user chose All. It hides rows whose delegated marker is `live` while their status
 is idle, working, or done, and keeps blocked, unknown, and unmarked rows. All
 clears only this plugin's view and reports a view that another tool owns.
 _Avoid_: hiding processes, notification filter, popup
 
-**Pi startup confirmation**:
-The bounded check that a `/worktree` handoff's Pi is running before its
-workspace is focused: a Pi process in the root pane with the worktree cwd whose
+**omp startup confirmation**:
+The bounded check that a `/subagent-worktree` handoff's omp is running before its
+workspace is focused: an omp process in the root pane with the worktree cwd whose
 launch-time environment names the launched session in
-`PI_HERDR_AGENTS_SESSION`. Nothing inside Pi reads that marker.
+`PI_HERDR_AGENTS_SESSION`. Nothing inside omp reads that marker.
 _Avoid_: argv match, `--session` visibility, child-context hint
 
 **No-progress advisory**:
@@ -122,18 +122,18 @@ _Avoid_: Hang verdict, automatic recovery, stall replacement
 **Legacy external CLI role**:
 An old role definition that contains `cli`. Discovery reports a migration
 diagnostic, and launch fails before Herdr creates a pane or worktree. Remove
-`cli` and `cli-model`, then select the model through Pi provider/model routing.
-_Avoid_: Silent Pi reinterpretation, compatibility adapter
+`cli` and `cli-model`, then select the model through omp provider/model routing.
+_Avoid_: Silent omp reinterpretation, compatibility adapter
 
 **Pack-neutral host**:
 This package as an execution host that ships no agent roles and no planning or
-review workflows. Its only skill, `pi-herdr-agents`, is a general operating guide for its own
+review workflows. Its only skill, `omp-herdr-agents`, is a general operating guide for its own
 control tools. Role packs and project or global definitions supply every
 named role. An empty catalog is valid, and bare launches need no role.
 _Avoid_: Default role set, privileged pack, starter workflow
 
 **Role pack**:
-A separately installed Pi package that registers role definitions through the
+A separately installed omp plugin that registers role definitions through the
 `pi-herdr-subagents:roles:discover:v1` event. Registered packs form the whole
 package layer below global and project definitions; duplicate names across
 packs are disabled. A pack owns its roles' workflows, skills, prerequisites, and
@@ -142,7 +142,7 @@ _Avoid_: Bundled layer, protected fallback, load-order winner
 
 **Child-context hint**:
 The `PI_SUBAGENT_ID` environment variable set for every fresh or resumed child
-this extension launches, and absent from `/worktree` handoff sessions. It
+this extension launches, and absent from `/subagent-worktree` handoff sessions. It
 distinguishes delegated children from user sessions for tool registration and
 pack state decisions. Nested processes inherit it, so it is not a security
 boundary.
@@ -151,7 +151,7 @@ _Avoid_: Authentication token, permission check, second child protocol
 **Delegation depth**:
 The number of launches between a top-level session (depth 0) and a session,
 exported as `PI_SUBAGENT_DEPTH=<parent depth + 1>` on every launch, including
-resumes and `/worktree` handoffs. The host refuses any launch whose child depth
+resumes and `/subagent-worktree` handoffs. The host refuses any launch whose child depth
 would exceed `spawning.maxDepth` (default 3), for every role. A non-numeric or
 negative inherited value is an unknown depth and refuses launches; it never
 resets to 0.
@@ -164,18 +164,18 @@ extension never rewrites user configuration.
 _Avoid_: Bundled-role toggle, automatic migration
 
 **Role allowlist**:
-The `tools:` inline comma-separated role-frontmatter scalar passed to Pi for a
+The `tools:` inline comma-separated role-frontmatter scalar passed to omp for a
 public child. It is the enforced capability boundary available to a reviewer.
 `read,bash` is not read-only because Bash can mutate files.
 _Avoid_: Shell-as-read-only claim, implicit capability grant
 
 **Persistent specialist**:
-A logical subagent that retains one policy-bound Pi session between sequential
+A logical subagent that retains one policy-bound omp session between sequential
 tasks until it is stopped or crashes.
 _Avoid_: Immortal process, reusable pane
 
 **Session generation**:
-One concrete Pi session serving a persistent specialist's logical identity.
+One concrete omp session serving a persistent specialist's logical identity.
 _Avoid_: Logical specialist, revived session
 
 **Task outcome**:
@@ -197,7 +197,7 @@ _Avoid_: Agent workspace, label-based ownership, automatic rearrangement
 
 **Retained checkout shell**:
 The interactive shell in a managed worktree's root pane, preserved after the
-child Pi process exits. Temporary review panes can close without deleting this
+child omp process exits. Temporary review panes can close without deleting this
 surface or its checkout.
 _Avoid_: Completed agent process, disposable pane, automatic worktree cleanup
 

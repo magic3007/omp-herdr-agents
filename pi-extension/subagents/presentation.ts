@@ -156,9 +156,16 @@ export function boundChildDelivery(args: {
 	return `${head}\n\n${report}${tail}${sessionRef}`;
 }
 
+/**
+ * How to reopen a recorded child session on this host. omp adopts an existing
+ * session file by path with `-r`, which is why the child is launched the same
+ * way (pi's `--session <file>` does not exist here).
+ */
+export const RESUME_COMMAND = "omp -r";
+
 function formatSessionReference(sessionFile?: string): string {
 	return sessionFile
-		? `\n\nSession: ${sessionFile}\nResume: pi --session ${sessionFile}`
+		? `\n\nSession: ${sessionFile}\nResume: ${RESUME_COMMAND} ${sessionFile}`
 		: "";
 }
 

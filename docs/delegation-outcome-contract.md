@@ -3,7 +3,7 @@
 - **Contract version:** `delegation-outcome/v0`
 - **Status:** v0 is implemented. The [proposed v0.1 additions](#proposed-for-v01)
   are not.
-- **Reference implementation:** `pi-herdr-agents`
+- **Reference implementation:** `omp-herdr-agents`
 - **Decision:** [ADR-0016](adr/0016-delegation-outcome-contract.md)
 - **Code anchors:** every `file:line` cites commit `9befa7f`.
 
@@ -18,7 +18,7 @@ which roles exist.
 | Role | Meaning |
 | --- | --- |
 | Parent | The agent that delegates a task and evaluates the outcome. |
-| Host | The orchestrator that launches the child and delivers its outcome. `pi-herdr-agents` is the reference host. |
+| Host | The orchestrator that launches the child and delivers its outcome. `omp-herdr-agents` is the reference host. |
 | Child | The delegated agent. It writes the report text and nothing else in the delivery. |
 
 The host enforces mechanisms. It frames child text, bounds sizes, records
@@ -145,7 +145,7 @@ worktree handoff (`presentation.ts:196-202`).
 
 | Evidence | Message text | Structured details |
 | --- | --- | --- |
-| Session file | `Session: <path>` and `Resume: pi --session <path>` (`presentation.ts:159-163`, `delivery.ts:267`) | `sessionFile` |
+| Session file | `Session: <path>` and `Resume: omp -r <path>` (`presentation.ts:159-163`, `delivery.ts:267`) | `sessionFile` |
 | Model provenance | `Requested model:`, `Models attempted:` when more than one, `Model used:`, and `Model failures (raw errors, in attempt order):` (`presentation.ts:319-330`) | `fallbackAttempts`, `fallbackFailures`, `runtimePlan` |
 | Runtime mismatch | `Runtime warning: <text>` (`presentation.ts:332-334`) | `runtimePlan.runtimeMismatch` |
 | Provider error | `Error: <raw error>` in the head (`presentation.ts:299-310`) | `errorMessage` |

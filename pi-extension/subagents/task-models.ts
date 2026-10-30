@@ -87,7 +87,7 @@ export function registerTaskModelTool(
 		pi.registerTool({
 			name: "subagents_write_task_models",
 			label: "Write task model preferences",
-			description: `Validate and atomically replace models.tasks and models.tasksMeta in the durable Pi agent config, preserving unrelated settings. Supported categories: ${TASK_CATEGORIES.join(", ")}. Partial nonempty categories are accepted; omitted categories are removed. Rejects duplicate exact refs within a category. Review the active authenticated registry and existing preferences first. Optional expectedConfigRevision makes the write conditional: it fails without replacing configuration when the config file no longer matches the revision the proposal was read from. Optional basis records what the ranking rests on; its kind must equal tasksMeta.method, and it is returned but not saved. Cooperating writes are serialized and fail on contention rather than waiting. Returns normalized saved preferences, missing categories, the configRevision of the written file, and any basis; reload required.`,
+			description: `Validate and atomically replace models.tasks and models.tasksMeta in the durable host agent config, preserving unrelated settings. Supported categories: ${TASK_CATEGORIES.join(", ")}. Partial nonempty categories are accepted; omitted categories are removed. Rejects duplicate exact refs within a category. Review the active authenticated registry and existing preferences first. Optional expectedConfigRevision makes the write conditional: it fails without replacing configuration when the config file no longer matches the revision the proposal was read from. Optional basis records what the ranking rests on; its kind must equal tasksMeta.method, and it is returned but not saved. Cooperating writes are serialized and fail on contention rather than waiting. Returns normalized saved preferences, missing categories, the configRevision of the written file, and any basis; reload required.`,
 			parameters: Type.Object({
 				tasks: Type.Object(
 					Object.fromEntries(
@@ -206,12 +206,12 @@ export function registerTaskModelInit(pi: ExtensionAPI): void {
 					reason:
 						"a turn is in progress or messages are queued. Nothing was queued; retry when idle",
 				};
-			// Pi refuses a prompt without a model only after submission; refuse first.
+			// The host refuses a prompt without a model only after submission; refuse first.
 			if (!ctx.model)
 				return {
 					kind: "not-started",
 					reason:
-						"no model is selected, so Pi cannot run the init prompt. Select a model, then retry",
+						"no model is selected, so the host cannot run the init prompt. Select a model, then retry",
 				};
 			return startTaskModelInit({
 				preferences,

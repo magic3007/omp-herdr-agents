@@ -5,7 +5,7 @@ This page is the reference for the durable `config.json` settings, task-model pr
 ## Configuration file
 
 The durable user configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`,
-defaulting to `~/.pi/agent/herdr-agents/config.json`. It is not read from the
+defaulting to `~/.omp/agent/herdr-agents/config.json`. It is not read from the
 installed package root, so npm and git package upgrades do not overwrite it.
 Create it by copying the installed package's `config.json.example`, or run
 `/subagents-init` to seed and draft model task preferences.
@@ -43,8 +43,8 @@ If `config.json` is absent, status, role, pane, spawning, persistent-specialist,
 Model routing does not read the example: no model overrides apply until a real
 `config.json` exists.
 
-`config.json` is durable user state under the Pi agent directory and is loaded
-when the extension starts. Run `/reload` after changing it. Package-root
+`config.json` is durable user state under the omp agent directory and is loaded
+when the extension starts. Start a new session after changing it. Package-root
 `config.json` files are ignored; move them manually or re-run `/subagents-init`.
 
 ## Model preferences
@@ -103,7 +103,7 @@ The command supplies a sanitized snapshot of **all available models from the
 active session registry**, including extension-registered providers, exact IDs,
 display names, reported base token costs, context/output limits, input
 modalities, reasoning, and supported thinking levels. Safe extension-registration and auth-source
-metadata is included when Pi exposes it; credentials, endpoints, and raw auth
+metadata is included when omp exposes it; credentials, endpoints, and raw auth
 labels are not. Configured authentication does not prove account access or a
 successful request. Missing costs remain unknown; reported zero does not mean
 free, and OAuth does not establish subscription billing. The brief uses compact
@@ -214,7 +214,7 @@ reviewer in a fresh standalone session. Disclose that this review is
 context-isolated, not cross-family independent. Cross-family verification
 must not use this fallback. Another route to the same family is not
 independent review. Family is the independence boundary; project policy may
-separately require a different provider. Run `/reload` (or start a new session)
+separately require a different provider. Start a new session
 after writing preferences.
 
 ## Persistent specialist limit
@@ -225,9 +225,9 @@ Set `persistent.maxAgents` to the maximum concurrently retained persistent speci
 
 Set `spawning.maxDepth` to the deepest child any launch may create. It must be a positive integer and defaults to `3`; unknown keys and other values fail configuration loading. A top-level parent session is depth `0`, its children are depth `1`, grandchildren `2`, and great-grandchildren `3`. A session at depth `maxDepth` cannot launch anything.
 
-The limit is enforced by the host on every launch path: `subagent` (including `agent`, persistent, and `worktree` launches), `subagent_resume`, `/subagent`, and `/worktree`. It applies to all roles, not only `self-spawn` ones. A refused launch returns an actionable error before Herdr creates a pane or workspace.
+The limit is enforced by the host on every launch path: `subagent` (including `agent`, persistent, and `worktree` launches), `subagent_resume`, `/subagent`, and `/subagent-worktree`. It applies to all roles, not only `self-spawn` ones. A refused launch returns an actionable error before Herdr creates a pane or workspace.
 
-Every launched Pi receives `PI_SUBAGENT_DEPTH=<parent depth + 1>`, set explicitly in the launch command so a value left in the pane's shell never reaches the child. A parent reads its own depth from that variable; an absent variable means a top-level session (depth `0`). A present value that is not a canonical non-negative integer (for example empty, `abc`, `-1`, or `1.5`) is treated as an unknown depth: the session is treated as already at the limit and every launch is refused until the variable is unset. It never resets the count to `0`. Run `/reload` after changing `spawning.maxDepth`.
+Every launched omp receives `PI_SUBAGENT_DEPTH=<parent depth + 1>`, set explicitly in the launch command so a value left in the pane's shell never reaches the child. A parent reads its own depth from that variable; an absent variable means a top-level session (depth `0`). A present value that is not a canonical non-negative integer (for example empty, `abc`, `-1`, or `1.5`) is treated as an unknown depth: the session is treated as already at the limit and every launch is refused until the variable is unset. It never resets the count to `0`. Start a new session after changing `spawning.maxDepth`.
 
 ## Launch roster
 
@@ -252,7 +252,7 @@ a configuration error.
 }
 ```
 
-The setting is read when the extension loads, so run `/reload` after changing
+The setting is read when the extension loads, so start a new session after changing
 it.
 
 ## Deprecated `roles.bundled`
@@ -300,22 +300,22 @@ type OpenResult =
   once, and it must return synchronously.
 - `ready` must leave `toolName` active. Its `instructions` replace the host's
   writer instruction in the prompt the host sends.
-- `ready` must include `cancel`. When the host does not hand the prompt to Pi
-  (the tool is inactive, or `pi.sendUserMessage` throws), it calls `cancel()`
+- `ready` must include `cancel`. When the host does not hand the prompt to the
+  host runtime (the tool is inactive, or `pi.sendUserMessage` throws), it calls `cancel()`
   once before reporting `not-started`. `cancel` must close only the flow that
   this `open` created, never a later one. A `cancel` that throws is reported
   with the outcome.
 - A throw, a promise, an invalid result (including a missing `cancel`), or
   `blocked` stops init with a notice and no prompt. The host cannot undo what
   `open` changed before failing.
-- Pi accepts the prompt asynchronously. It can still reject it after `start`
+- The host accepts the prompt asynchronously. It can still reject it after `start`
   reports `started`, for example when the selected model has no configured
-  auth; the host refuses up front only when no model is selected. Pi delivers
+  auth; the host refuses up front only when no model is selected. The host delivers
   the prompt to `input` handlers (source `"extension"`) before that check and
   emits `before_agent_start` and `agent_start` only after it passes. An
   extension whose flow outlives one prompt should close it when other input or
   a run arrives before those events, so a later request cannot inherit it.
-- Pi's event bus logs and swallows listener exceptions. A listener that throws
+- The host's event bus logs and swallows listener exceptions. A listener that throws
   before offering looks the same as no listener, so init uses the direct
   writer. An extension that guards the writer still refuses that write.
 
@@ -334,7 +334,7 @@ type InitOutcome =
   | { kind: "not-started"; reason: string };
 ```
 
-The host offers synchronously as `pi-herdr-agents` and starts nothing until the
+The host offers synchronously as `omp-herdr-agents` and starts nothing until the
 emitter calls `start()`. Call it only when exactly one host offered. `start`
 runs init with the request's context and returns synchronously; the emitter
 shows a `not-started` reason. The host does not listen in subagent sessions
@@ -344,7 +344,7 @@ too, as the role-pack bridge does.
 ## Sidebar markers
 
 The extension always marks delegated children for the optional
-[Pi Herdr Agents Sidebar](../plugins/sidebar/README.md) Herdr plugin, whose Focus
+[omp Herdr Agents Sidebar](../plugins/sidebar/README.md) Herdr plugin, whose Focus
 action hides marked children from Herdr's Agents view. There is no setting:
 install the plugin to use the markers, or uninstall it to ignore them. Releases
 `3.2.0` through `3.3.1` wrote markers only with `sidebar.enabled` set to `true`;
@@ -356,16 +356,16 @@ reports the child's own session file as the pane's `agent_session`, within 15
 seconds of launch, the parent reports the pane token `piha_delegated_v1` with
 the value `live`, a 15-second time-to-live, and an increasing sequence number.
 It renews the token on supervision checks, each time only after Herdr still
-reports that session. Herdr learns each Pi's session from its own Pi
-integration (`herdr integration install pi`), and drops it when that Pi exits,
-so without the integration nothing is marked. With Herdr 0.9.4 or later, a Pi
+reports that session. Herdr learns each omp session from its own omp
+integration (`herdr integration install omp`), and drops it when that omp exits,
+so without the integration nothing is marked. With Herdr 0.9.4 or later, an omp
 suspended with Ctrl-Z keeps its session, also after it resumes with `fg`,
 until it exits. Herdr 0.9.3 and earlier drop it at suspend. The parent clears
 the token when the run finalizes or is suppressed, or when Herdr no longer
-reports the child's session. A `/worktree` handoff session
+reports the child's session. A `/subagent-worktree` handoff session
 is never marked.
 
-Marker reads and writes never fail a launch or keep Pi running. Each has a
+Marker reads and writes never fail a launch or keep omp running. Each has a
 2-second timeout on an unreferenced socket. Before the marker is live, a failed
 read is retried every 250 milliseconds until the 15-second discovery window
 ends. Once it is live, failures are not retried, and three failed renewal
@@ -375,7 +375,7 @@ up to 15 seconds after the last write Herdr applied. A marker belongs to the
 pane, so after the child exits, an agent started by hand in that pane can stay
 hidden by Focus until the next renewal clears the marker, usually within 5
 seconds. With Herdr 0.9.4 or later, a suspended child stays marked, also
-after it resumes with `fg`, until it exits; a non-Pi program started at that
+after it resumes with `fg`, until it exits; a non-omp program started at that
 pane's shell meanwhile can stay hidden until the suspended child exits. Herdr
 0.9.3 and earlier clear the marker within about 5 seconds of suspending. See
 [what a marker proves](../plugins/sidebar/README.md#what-a-marker-proves) and
@@ -396,7 +396,7 @@ the legacy one-second polling cadence. No caller action is required.
 
 Set `supervision.forcePolling` to `true` in the durable user `config.json` to
 disable wake-ups and use that legacy cadence deliberately. The setting is read
-when the coordinator is created, so run `/reload` after changing it.
+when the coordinator is created, so start a new session after changing it.
 `subagents_list` reports the active transport mode (`wake+batch`,
 `polling(forced)`, or `polling(fallback)`) and watcher count.
 
@@ -448,9 +448,9 @@ Checkout matching uses Herdr's canonical `worktree.checkout_path` and includes d
 
 Explicit `panes.mode: "tab"` preserves one new tab per ordinary child in the caller's workspace. Explicit `"split"` preserves splits of the stable parent pane. `panes.direction` is `"right"` (default) or `"down"` and applies to grouped and legacy splits. `maxPerTab` does not affect these legacy modes. Managed worktrees retain their separate workspaces.
 
-Ownership is tracked by returned pane/tab/workspace IDs, never labels. Separate parent processes own separate groups; `/reload` preserves a parent's in-memory ownership, but a full restart does not adopt old tabs. Placement never moves existing panes or renames user tabs. Background launches preserve focus; Herdr may resize sibling panes when splitting or closing. User-added panes are never closed by automatic tab cleanup. An owned tab remains reusable while user panes remain, even after all child panes close.
+Ownership is tracked by returned pane/tab/workspace IDs, never labels. Separate parent processes own separate groups; a parent session switch preserves a parent's in-memory ownership, but a full restart does not adopt old tabs. Placement never moves existing panes or renames user tabs. Background launches preserve focus; Herdr may resize sibling panes when splitting or closing. User-added panes are never closed by automatic tab cleanup. An owned tab remains reusable while user panes remain, even after all child panes close.
 
-Run `/reload` after changing role, model, or pane settings.
+Start a new session after changing role, model, or pane settings.
 
 ## Model resolution and fallback
 
@@ -464,10 +464,10 @@ example `provider/preferred, provider/fallback`. The tool argument also accepts
 `task:<category>` as its complete value (not in a list), for configured
 `coding`, `review`, `recon`, `qa`, `architecture`, or `docs` preferences. The extension validates every
 candidate before launch, then launches later candidates only after the selected
-child settles with a provider/agent error. Pi owns any automatic transient
+child settles with a provider/agent error. omp owns any automatic transient
 retrying inside that child; the extension does not infer retry counts or
 permanence from the error text. A later candidate that launches after a parent
-`/reload`, `/new`, `/resume`, or `/fork` uses the live parent session for its
+`/new`, `/resume`, or `/fork` uses the live parent session for its
 artifacts and lineage, as completion delivery does. Its candidate list and
 thinking level stay those of the original call. The original parent directory
 and process directory remain the bases for directory resolution. Role files are
@@ -490,29 +490,29 @@ before it creates a pane, worktree or session file:
 
 - An omitted `model` inherits the parent model only when that model is in the
   scope. Otherwise the ordinary, persistent or worktree `subagent` call, and
-  `/worktree`, fail with an error that names the parent model and the scope.
+  `/subagent-worktree`, fail with an error that names the parent model and the scope.
   To launch, pass an in-scope `model` or `task:` category, set `model` in the
   role definition, or switch the parent model with `/model`.
 - `subagent_resume` reads the stored model of the session being resumed (the
   latest `model_change` on its active branch, else its latest assistant
   response) and refuses when that model is missing or out of scope. Otherwise
-  it pins that model with `--model` so Pi cannot restore a different one.
+  it pins that model with `--model` so omp cannot restore a different one.
 - A fallback candidate is checked again against the live scope just before its
   attempt. A candidate the scope no longer contains is skipped and recorded in
   the fallback failures with the reason. Candidate order and thinking level
   stay unchanged.
-- Fresh, persistent, worktree, `/worktree` and resumed children receive the
+- Fresh, persistent, worktree, `/subagent-worktree` and resumed children receive the
   parent's resolved scope as `--models provider/model-id,…`, so nested
   delegation stays scoped. A scope ref that contains a comma cannot be passed
   this way, and the launch fails.
 
-The extension checks only exact `provider/model-id` membership in the scope Pi
+The extension checks only exact `provider/model-id` membership in the scope omp
 resolved for the parent. When the session is unscoped (no `--models`, and
 `enabledModels` absent or empty), none of these checks apply and children get
 no `--models`. A child resolves `--models` against its own catalog: if none
-of those refs resolves there, Pi treats the child as unscoped. The scope
+of those refs resolves there, omp treats the child as unscoped. The scope
 limits only what this extension launches. It does not stop someone working in a
-child pane from switching models with Pi's own `/model` command.
+child pane from switching models with omp's own `/model` command.
 
 A catalog-listed model and configured authentication do not prove that the
 active provider account can use that model. Providers may reject an account /
@@ -522,6 +522,6 @@ spawning a new subagent with a supported model, or choosing an appropriate
 configured fallback. `subagent_resume` does not select a model and should be
 used only after the session's stored model is usable; in a scoped session it
 keeps the stored model only when that model is in scope, as described above. Persistent session sidecars fail closed: v1 does not resume or revive a stopped or crashed specialist; retain its evidence and spawn a new specialist. The completion does not
-claim a permanent failure or a retry count that Pi has not exposed. Reliable
-structured permanence and retry counts require an upstream Pi/ExtensionAPI
+claim a permanent failure or a retry count that omp has not exposed. Reliable
+structured permanence and retry counts require an upstream ExtensionAPI
 diagnostics seam for final provider errors and retry outcomes.

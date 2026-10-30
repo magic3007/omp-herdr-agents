@@ -24,6 +24,7 @@ import {
 	type SubagentPingDetails,
 	sendSubagentResult,
 	formatWorktreeHandoff,
+	RESUME_COMMAND,
 	resolveResultPresentation,
 	resolveCancelledPresentation,
 } from "./presentation.ts";
@@ -287,7 +288,7 @@ export function createDelivery({
 			const worktreeRef = result.worktree
 				? `\n\n${formatWorktreeHandoff(result.worktree)}`
 				: "";
-			const sessionRef = `\n\nSession: ${result.sessionFile}\nResume: pi --session ${result.sessionFile}`;
+			const sessionRef = `\n\nSession: ${result.sessionFile}\nResume: ${RESUME_COMMAND} ${result.sessionFile}`;
 			const details: SubagentPingDetails = {
 				name: result.ping.name,
 				message: result.ping.message,

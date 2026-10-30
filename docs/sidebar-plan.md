@@ -1,9 +1,9 @@
-# Pi Herdr Agents Sidebar plan
+# omp Herdr Agents Sidebar plan
 
 > **Superseded marker evidence.** This plan's markers relied on the child's
 > Linux `/proc` process identity, and so the plugin declared only `linux`.
 > Markers now publish and renew only while Herdr reports the child's own
-> session file as the pane's `agent_session`, as Herdr's Pi integration
+> session file as the pane's `agent_session`, as Herdr's omp integration
 > reports it. That works on macOS too, and it removes the accepted
 > suspended-child pane-reuse limitation below. Ordinary and resumed children
 > no longer record a process identity. The shipped contract is in
@@ -25,7 +25,7 @@ released. See [Implementation status](#implementation-status).
 
 Keep main agents easy to find while delegated children remain accessible through
 Herdr. Build the optional companion in `plugins/sidebar/`, in this repository.
-Its plugin ID is `pi-herdr-agents.sidebar`.
+Its plugin ID is `omp-herdr-agents.sidebar`.
 
 The first version exposes two explicit actions:
 
@@ -48,7 +48,7 @@ Keep these cases distinct:
 | Case | Intended treatment |
 | --- | --- |
 | Main or manually started agent | Visible |
-| Explicit interactive `/worktree` handoff | Visible |
+| Explicit interactive `/subagent-worktree` handoff | Visible |
 | Delegated ordinary or resumed child | Eligible for Focus while recognized |
 | Persistent specialist between tasks | Still a delegated process |
 | Blocked child | Visible as a conservative attention exception |
@@ -98,7 +98,7 @@ live at render time. Use `piha_delegated_v1 = live` with a 15-second TTL and a
 stable metadata source. Missing or unknown-valued markers remain visible.
 The host owns marking, renewal, and cleanup. Tagging is opt-in and off by default.
 Keep writes bounded and ordered, clear during finalization, and stop renewing
-when the original run cannot be verified. Do not let a replacement Pi process
+when the original run cannot be verified. Do not let a replacement omp process
 inherit an old run's renewal. Use existing identity evidence where necessary;
 do not create another registry or add a broad abstraction for presentation.
 
@@ -134,7 +134,7 @@ plugin README and link it from the main README. Do not change the npm version.
 - Host without plugin and plugin without tags.
 - Known child marker, unknown marker, missing marker, and blocked child.
 - Ordinary, resumed, persistent, and delegated worktree children.
-- Interactive `/worktree` handoff and manual reuse of a retained root pane.
+- Interactive `/subagent-worktree` handoff and manual reuse of a retained root pane.
 - Normal exit, abrupt exit, parent failure, and unavailable socket.
 - Delayed metadata writes and stale lease expiry.
 - Two parent sessions, repeated actions, and a competing view owner.
@@ -353,7 +353,7 @@ be the only allocator with return-only ownership and unconditional deletion.
   changed TypeScript files, and LSP: clean.
 - Open finding, not fixed: in the second lab, two processes outlived the
   run, a worktree child's hold loop and its `sleep`. The launch ID dates them
-  to "clears a killed child's marker". That test kills the child's Pi
+  to "clears a killed child's marker". That test kills the child's omp
   process, which orphans the loop. The likely cause is that `cleanupTestEnv`
   deletes the gate file before the loop's next check. The loop then runs out
   its 120-second bound. The lab runner killed both. This pass did not change
@@ -364,13 +364,13 @@ Fix for the orphaned hold loop, on Linux with Node 26.8.2. Scripts and logs
 are under `/tmp/sidebar-build-7/`. The final review is recorded in the final verification record.
 
 - Cause, reproduced before the fix in three fresh labs with a watcher that
-  logged gate files and hold processes: Pi's bash tool starts each hold in a
+  logged gate files and hold processes: the host's bash tool starts each hold in a
   session of its own and kills it only on `SIGHUP` or `SIGTERM`. After the
-  test sends `SIGKILL` to the worktree child's Pi, `systemd --user` adopts
+  test sends `SIGKILL` to the worktree child's omp, `systemd --user` adopts
   the child's hold, and only the gate can end it. `releaseLaunch` wrote the gate,
   and `afterEach` deleted it about 50 ms later, inside one 200 ms poll. Two of
   the three runs missed the gate, and the loop outlived the passing test
-  until the lab runner killed it. The ordinary child's hold, whose Pi was
+  until the lab runner killed it. The ordinary child's hold, whose omp was
   alive, exited both times.
 - Each hold now writes its own PID next to its marker, from `holdCommand` in
   `test/integration/sidebar-fixture.ts`. `readHold` pins that PID by its
@@ -380,7 +380,7 @@ are under `/tmp/sidebar-build-7/`. The final review is recorded in the final ver
   before it removes the worktree. A hold still running is residue, so
   `afterEach` keeps the gate and the evidence.
 - The killed-child test now asserts that the orphaned hold still runs after
-  both Pi processes die, then releases the launch and asserts that no pinned
+  both omp processes die, then releases the launch and asserts that no pinned
   hold runs. Without the wait, that assertion failed with both holds
   running.
 - After the fix, the killed-child test passed in two fresh labs, and
@@ -475,11 +475,11 @@ network, and mount namespace sandbox. Details, commands, and raw output are in
 Product finding, accepted by the user as a documented limitation with no code
 change: the marker belongs to the pane. Evidence is in
 `/tmp/piha-sidebar-adversarial-up9g8W/evidence/replacement/pp3/timeline.txt`
-and `results.json`. A suspended original Pi child (Ctrl-Z, state `T`) stayed
+and `results.json`. A suspended original omp child (Ctrl-Z, state `T`) stayed
 alive, and the production marker code kept renewing its marker. A manually
-started Pi in the same pane stayed hidden under Focus for 48 to 69 seconds.
+started omp in the same pane stayed hidden under Focus for 48 to 69 seconds.
 All revealed it, and killing the original cleared the marker. The test used a
-supervision loop stand-in, not the full `subagent` tool path. Both Pi processes
+supervision loop stand-in, not the full `subagent` tool path. Both omp processes
 shared a pane and name, so row binding is not proven. The foreground process ID
 was verified. Killing the original cleared the marker within about 2 seconds, and
 the new row then appeared under Focus. The documented workaround is in the

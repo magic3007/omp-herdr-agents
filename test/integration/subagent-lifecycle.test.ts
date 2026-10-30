@@ -479,7 +479,7 @@ for (const backend of backends) {
 				const eligibleEntry = /eligible\s+·\s+Git:\s+0\s+dirty/;
 				const eligibleDeadline = Date.now() + PI_TIMEOUT;
 				for (;;) {
-					runInPane(surface, "/worktree list");
+					runInPane(surface, "/subagent-worktree list");
 					try {
 						await waitForScreen(surface, eligibleEntry, 20_000, 300);
 						break;
@@ -505,7 +505,10 @@ for (const backend of backends) {
 					join(worktree.path, "uncommitted.txt"),
 					"retained dirty state\n",
 				);
-				runInPane(surface, `/worktree remove ${worktree.open_workspace_id}`);
+				runInPane(
+					surface,
+					`/subagent-worktree remove ${worktree.open_workspace_id}`,
+				);
 				await waitForScreen(surface, dirtyCleanupWarning, PI_TIMEOUT, 300);
 				assert.equal(existsSync(worktree.path), true);
 				assert.equal(
@@ -523,7 +526,10 @@ for (const backend of backends) {
 					cwd: worktree.path,
 					encoding: "utf8",
 				}).trim();
-				runInPane(surface, `/worktree remove ${worktree.open_workspace_id}`);
+				runInPane(
+					surface,
+					`/subagent-worktree remove ${worktree.open_workspace_id}`,
+				);
 				await waitForScreen(surface, /commits\s+retained/, PI_TIMEOUT, 300);
 				assert.equal(existsSync(worktree.path), false);
 				assert.match(

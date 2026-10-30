@@ -1,16 +1,16 @@
-# Pi Herdr Agents
+# omp Herdr Agents
 
-[![npm version](https://img.shields.io/npm/v/pi-herdr-agents)](https://www.npmjs.com/package/pi-herdr-agents)
-[![CI](https://github.com/giuseppecrj/pi-herdr-agents/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/giuseppecrj/pi-herdr-agents/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/omp-herdr-agents)](https://www.npmjs.com/package/omp-herdr-agents)
+[![CI](https://github.com/magic3007/omp-herdr-agents/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/magic3007/omp-herdr-agents/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![Pi Herdr Agents: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-agents/main/docs/assets/pi-herdr-agents-gallery.png)
+![omp Herdr Agents: a parent omp session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/magic3007/omp-herdr-agents/main/docs/assets/omp-herdr-agents-gallery.png)
 
-Asynchronous subagents for [Pi](https://github.com/earendil-works/pi), running exclusively in [Herdr](https://herdr.dev).
+Asynchronous subagents for [omp](https://github.com/can1357/oh-my-pi), running exclusively in [Herdr](https://herdr.dev).
 
-Delegate investigation, implementation, and review without blocking the parent session. Each child runs as a real Pi process in its own Herdr pane. Its result comes back to the parent automatically when it finishes.
+Delegate investigation, implementation, and review without blocking the parent session. Each child runs as a real omp process in its own Herdr pane. Its result comes back to the parent automatically when it finishes.
 
-> **Agents:** load the operating guide with `/skill:pi-herdr-agents`. It covers launching, supervising, interrupting, cancelling, and resuming children, worktrees, persistent specialists, model routing, and configuration. The source is [`skills/pi-herdr-agents/SKILL.md`](skills/pi-herdr-agents/SKILL.md). Contributors: read [`AGENTS.md`](AGENTS.md).
+> **Agents:** load the operating guide with `/skill:omp-herdr-agents`. It covers launching, supervising, interrupting, cancelling, and resuming children, worktrees, persistent specialists, model routing, and configuration. The source is [`skills/omp-herdr-agents/SKILL.md`](skills/omp-herdr-agents/SKILL.md). Contributors: read [`AGENTS.md`](AGENTS.md).
 
 ## Contents
 
@@ -24,64 +24,60 @@ Delegate investigation, implementation, and review without blocking the parent s
 
 - **Non-blocking delegation.** `subagent` acknowledges the launch at once, and the parent keeps working.
 - **Parallel execution.** Run independent scouts, workers, and reviewers at the same time.
-- **Live supervision.** Pi's subagent widget tracks process and turn state. You can interrupt one child turn without ending its session.
+- **Live supervision.** omp's subagent widget tracks process and turn state. You can interrupt one child turn without ending its session.
 - **Managed worktrees.** Writing agents can run in retained Herdr workspaces with explicit Git ownership and recovery details.
-- **Conversation handoff.** `/worktree` continues the active Pi conversation in a new worktree and keeps the parent session.
+- **Conversation handoff.** `/subagent-worktree` continues the active omp conversation in a new worktree and keeps the parent session.
 - **Pack-neutral roles.** Use project or global definitions and installable role packs. This package ships no default roles or workflows.
-- **Persistent specialists.** Keep one policy-bound Pi session for sequential, turn-based tasks.
-- **Optional sidebar focus.** The companion [Pi Herdr Agents Sidebar](plugins/sidebar/README.md) Herdr plugin hides marked delegated children from Herdr's Agents view while Focus is on. Markers are display only and follow the pane. See [Sidebar plugin](#sidebar-plugin).
+- **Persistent specialists.** Keep one policy-bound omp session for sequential, turn-based tasks.
+- **Optional sidebar focus.** The companion [omp Herdr Agents Sidebar](plugins/sidebar/README.md) Herdr plugin hides marked delegated children from Herdr's Agents view while Focus is on. Markers are display only and follow the pane. See [Sidebar plugin](#sidebar-plugin).
 
 ## Requirements
 
-- [Pi](https://github.com/earendil-works/pi) with package support
+- [omp](https://github.com/can1357/oh-my-pi) with plugin support
 - [Herdr](https://herdr.dev) and its CLI
-- `HERDR_ENV=1`, which means you start Pi from inside Herdr
+- `HERDR_ENV=1`, which means you start omp from inside Herdr
 
-Other terminal multiplexers are not supported. Session startup skips worktree inventory to avoid blocking Pi initialization. Use `/worktree list` or `worktree_list` to inspect managed worktrees. Outside Herdr, explicit inventory tools report unavailable inspection as unknown. Worktrees isolate Git checkouts, not processes or permissions. Child agents and installed Pi packages run with your user account's access.
+Other terminal multiplexers are not supported. Session startup skips worktree inventory to avoid blocking omp initialization. Use `/subagent-worktree list` or `worktree_list` to inspect managed worktrees. Outside Herdr, explicit inventory tools report unavailable inspection as unknown. Worktrees isolate Git checkouts, not processes or permissions. Child agents and installed omp plugins run with your user account's access.
 
 ## Install
 
 Install from npm:
 
 ```bash
-pi install npm:pi-herdr-agents
+omp plugin install npm:omp-herdr-agents
 ```
 
-Install project-locally, or try it for one run:
+Install a local checkout, or try it for one run:
 
 ```bash
-pi install -l npm:pi-herdr-agents
-pi -e npm:pi-herdr-agents
+omp plugin install ./path/to/omp-herdr-agents
+omp -e ./path/to/omp-herdr-agents/pi-extension/subagents/index.ts
 ```
 
-Then start Pi inside Herdr:
+Then start omp inside Herdr:
 
 ```bash
 herdr
-pi
+omp
 ```
 
-Restart or `/reload` Pi after installation. Review package source before you install any Pi package.
+Restart omp after installation. Review package source before you install any omp plugin.
 
-### Optional methodology pack
+### Role-declared skills
 
-The optional [pi-herdr-clean-craft](https://github.com/giuseppecrj/pi-herdr-clean-craft) pack provides six explicit-only skills. Its `craft-mode` hub coordinates TDD, refactoring, architecture review, quality audits, and mutation testing. It supplies instructions, not roles or an execution runtime.
+A role's declared `skills` reach the child at the top of its first task. The host reads them from disk, without running project code, so a standalone child has every declared skill before it starts. See [How declared skills reach the child](docs/roles.md#how-declared-skills-reach-the-child).
 
-```bash
-pi install npm:pi-herdr-clean-craft@0.1.0
-```
-
-Start with `/skill:craft-mode` followed by your task. A role's declared `skills` reach the child at the top of its first task. The host reads them from disk, without running project code, so a standalone child has every declared skill before it starts. See [How declared skills reach the child](docs/roles.md#how-declared-skills-reach-the-child). Earlier hosts, such as 3.2.1, did not deliver them; see the [compatibility notes](https://github.com/giuseppecrj/pi-herdr-clean-craft/blob/main/docs/compatibility.md).
+This fork ships no methodology packs. The upstream [pi-herdr-clean-craft](https://github.com/giuseppecrj/pi-herdr-clean-craft) pack is a Pi-runtime pack and does not install into omp.
 
 ## Quick start
 
-A bare launch needs no installed role. Ask Pi to delegate in plain language:
+A bare launch needs no installed role. Ask omp to delegate in plain language:
 
 ```text
 Use two subagents in parallel to map the authentication flow and the session schema, then summarize their findings.
 ```
 
-Pi can also call the tool directly. Each call returns at once, and each result comes back on its own:
+omp can also call the tool directly. Each call returns at once, and each result comes back on its own:
 
 ```typescript
 subagent({ name: "auth-research", model: "<provider>/<fast-tier-id>", thinking: "low", task: "Map the authentication flow" });
@@ -97,16 +93,16 @@ Named roles such as `scout` come from your project or global definitions or from
 For an isolated writing task, hand the conversation to a new worktree:
 
 ```text
-/worktree auth-fix Implement the approved authentication fix and run the focused tests
+/subagent-worktree auth-fix Implement the approved authentication fix and run the focused tests
 ```
 
 The parent is the coordinator. Give each child one bounded outcome with its goal, allowed files, verification, and commit instruction. Use ordinary panes for read-only agents. A single or sequential writer can work in the parent checkout. Give each parallel, independent writer its own managed worktree, and keep dependent writes sequential. Children are leaves by default, and the parent owns integration and final verification.
 
 ## How it works
 
-![Pi Herdr Agents lifecycle: spawn a child, run it in Herdr, supervise live state, and deliver one bounded result to the parent.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-agents/main/docs/assets/async-subagent-lifecycle.png)
+![omp Herdr Agents lifecycle: spawn a child, run it in Herdr, supervise live state, and deliver one bounded result to the parent.](https://raw.githubusercontent.com/magic3007/omp-herdr-agents/main/docs/assets/async-subagent-lifecycle.png)
 
-A `subagent` call selects the target checkout, reuses its Herdr workspace, and gives the child a pane in an extension-owned `Agents` tab. Four panes fit in each tab by default, and overflow opens another tab in the same workspace. The call launches a child Pi session and returns `started`. The parent watches Herdr process state and child activity and shows the result in a live widget:
+A `subagent` call selects the target checkout, reuses its Herdr workspace, and gives the child a pane in an extension-owned `Agents` tab. Four panes fit in each tab by default, and overflow opens another tab in the same workspace. The call launches a child omp session and returns `started`. The parent watches Herdr process state and child activity and shows the result in a live widget:
 
 ```text
 ╭─ Subagents ──────────────────── 1 active · 1 open ─╮
@@ -115,7 +111,7 @@ A `subagent` call selects the target checkout, reuses its Herdr workspace, and g
 ╰────────────────────────────────────────────────────╯
 ```
 
-**Results arrive automatically.** When a child finishes, the parent receives one bounded `subagent_result` message and starts a new turn with that result in context. Do not poll, tail session files, or wait in a shell loop. Results longer than 16,000 characters are shortened in the parent context, and the full result stays in the child session. Active watchers survive parent `/reload`, `/new`, `/resume`, and `/fork`. Quitting Pi stops parent-side delivery.
+**Results arrive automatically.** When a child finishes, the parent receives one bounded `subagent_result` message and starts a new turn with that result in context. Do not poll, tail session files, or wait in a shell loop. Results longer than 16,000 characters are shortened in the parent context, and the full result stays in the child session. Active watchers survive a parent session switch (`/new`, `/resume`, `/fork`). Quitting omp stops parent-side delivery.
 
 Disposable ordinary panes close after their result is delivered, and Herdr removes a tab when its last pane closes. Persistent specialists keep their pane between tasks. Managed worktree roots return to retained interactive shells. Subagent launches do not steal keyboard focus.
 
@@ -143,11 +139,11 @@ Children get `caller_ping` to ask the parent for help. Interactive children also
 | Command | Use |
 | --- | --- |
 | `/subagent <agent> <task>` | Launch a named role. `/subagent list` lists roles. |
-| `/worktree <name> [task]` | Continue this conversation in a new managed worktree. `/worktree list` and `/worktree remove <target>` manage them. |
+| `/subagent-worktree <name> [task]` | Continue this conversation in a new managed worktree. `/subagent-worktree list` and `/subagent-worktree remove <target>` manage them. |
 | `/subagents-init [preferences]` | Draft task-category model preferences from the live model registry. |
-| `/skill:pi-herdr-agents` | Load the host operating guide. |
+| `/skill:omp-herdr-agents` | Load the host operating guide. |
 
-The main `subagent` parameters are `name`, `task`, `agent`, `model`, `thinking`, `fork`, `cwd`, `persistent`, `interactive`, and `worktree`. See [Parameters](docs/tools.md#parameters) for every parameter, and [Tools and lifecycle reference](docs/tools.md) for the full behavior of each tool. Live tool descriptions and these documents are authoritative. The `pi-herdr-agents` skill is a general operating guide.
+The main `subagent` parameters are `name`, `task`, `agent`, `model`, `thinking`, `fork`, `cwd`, `persistent`, `interactive`, and `worktree`. See [Parameters](docs/tools.md#parameters) for every parameter, and [Tools and lifecycle reference](docs/tools.md) for the full behavior of each tool. Live tool descriptions and these documents are authoritative. The `omp-herdr-agents` skill is a general operating guide.
 
 ## Choose models
 
@@ -159,7 +155,7 @@ Set each child's exact authenticated `provider/model-id` and a supported thinkin
 
 Then set thinking within that model's range. Without `model`, a child uses agent frontmatter, then `models.agents.<name>`, then `models.default`, then the parent model. Without `thinking`, it uses the role's thinking level when set, otherwise the parent level.
 
-A `model` value can also be an ordered fallback list, such as `provider/preferred, provider/fallback`, or a whole-value `task:<category>`. Task categories are `coding`, `review`, `recon`, `qa`, `architecture`, and `docs`. Their candidates come from `models.tasks` in `config.json`. Run `/subagents-init` to draft those preferences from your authenticated models, then `/reload`:
+A `model` value can also be an ordered fallback list, such as `provider/preferred, provider/fallback`, or a whole-value `task:<category>`. Task categories are `coding`, `review`, `recon`, `qa`, `architecture`, and `docs`. Their candidates come from `models.tasks` in `config.json`. Run `/subagents-init` to draft those preferences from your authenticated models, then start a new session:
 
 ```text
 /subagents-init Prefer capability over price for implementation; keep recon inexpensive
@@ -210,8 +206,8 @@ subagent({
 Cleanup is an explicit parent action:
 
 ```text
-/worktree list
-/worktree remove ticket/123
+/subagent-worktree list
+/subagent-worktree remove ticket/123
 ```
 
 Removal rechecks eligibility at the moment it runs. It requires the source repository to be inside the parent session's cwd, no detected process holder or live child, and a clean checkout with no untracked files or conflicts. Unknown Git state or failed process enumeration blocks removal. Unreadable individual process details produce warnings, not proof of inactivity. `--preserve` (or `preserve: true`) commits dirty work as a WIP commit first. Ignored files are not preserved and can be deleted. Cleanup never deletes branches, uses force flags, or closes the source repository's primary workspace.
@@ -222,8 +218,8 @@ Read [Worktree subagents](docs/worktree-subagents.md) before you run writing age
 
 A bare launch without `agent` always works. A named launch resolves `agent` from these sources, highest priority first:
 
-1. project definitions in `.pi/agents/`
-2. global definitions in `$PI_CODING_AGENT_DIR/agents/` (default `~/.pi/agent/agents/`)
+1. project definitions in `<cwd>/.omp/agents/`
+2. global definitions in `$PI_CODING_AGENT_DIR/agents/` (default `~/.omp/agent/agents/`)
 3. roles registered by installed role packs
 
 `/subagent list` and `subagents_list` show each visible role and its source. A missing or invalid named role fails before Herdr creates a pane or worktree. It is never replaced by a bare agent.
@@ -248,26 +244,26 @@ A `read, bash` allowlist is not a read-only boundary, because shell commands can
 
 ## Sidebar plugin
 
-The optional [Pi Herdr Agents Sidebar](plugins/sidebar/README.md) Herdr plugin adds two actions and turns Focus on by default. Focus hides delegated Pi children from Herdr's Agents view. All removes this plugin's filter and stays off until you run Focus again. It needs:
+The optional [omp Herdr Agents Sidebar](plugins/sidebar/README.md) Herdr plugin adds two actions and turns Focus on by default. Focus hides delegated omp children from Herdr's Agents view. All removes this plugin's filter and stays off until you run Focus again. It needs:
 
-- A `pi-herdr-agents` release newer than `3.3.1`, which marks children with no setting. Releases `3.2.0` through `3.3.1` also need `"sidebar": { "enabled": true }` in `config.json`, and macOS needs a release newer than `3.2.1`.
+- An `omp-herdr-agents` release, which marks children with no setting. The upstream `omp-herdr-agents` releases `3.2.0` through `3.3.1` also needed `"sidebar": { "enabled": true }` in `config.json`, and macOS needed an upstream release newer than `3.2.1`.
 - Linux or macOS
-- Herdr's Pi integration (`herdr integration install pi`), which reports each child's session to Herdr. The extension marks a child only while Herdr reports that child's own session.
+- Herdr's omp integration (`herdr integration install omp`), which reports each child's session to Herdr. The extension marks a child only while Herdr reports that child's own session.
 - Herdr `0.9.0` or later, the first release with the agent view API. Tested on `0.9.1`, `0.9.2-preview.2026-09-29-8e78f929d8f0`, and `0.9.5`; other builds are untested.
 - `node` on the `PATH` of the Herdr server
 
 1. Install the Herdr plugin. Herdr shows the manifest and commands for review:
 
    ```bash
-   herdr plugin install giuseppecrj/pi-herdr-agents/plugins/sidebar
+   herdr plugin install magic3007/omp-herdr-agents/plugins/sidebar
    ```
 
-2. After upgrading the extension, run `/reload` in each parent Pi session, or start a new one. Running children that were never marked are not marked retroactively; launch new ones.
+2. After upgrading the extension, restart each parent omp session, or start a new one. Running children that were never marked are not marked retroactively; launch new ones.
 3. Focus turns on by itself at the first agent Herdr detects after install, and again after a Herdr server restart. To change it, run an action. Your last choice sticks:
 
    ```bash
-   herdr plugin action invoke pi-herdr-agents.sidebar.focus
-   herdr plugin action invoke pi-herdr-agents.sidebar.all
+   herdr plugin action invoke omp-herdr-agents.sidebar.focus
+   herdr plugin action invoke omp-herdr-agents.sidebar.all
    ```
 
 Focus replaces the server-wide Agents view, including any filter set by another tool. Because Herdr keeps one view, the plugin also replaces another tool's view whenever it detects an agent, unless you chose All. All clears only this plugin's view and leaves another tool's view untouched.
@@ -276,7 +272,7 @@ Focus is display only. Hidden children keep running and still raise notification
 
 ## Configuration
 
-The durable configuration file is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, default `~/.pi/agent/herdr-agents/config.json`. Package upgrades never overwrite it. Create it by copying the installed package's `config.json.example`, or run `/subagents-init`. The extension reads it at startup, so run `/reload` after any change. A package-root `config.json` is ignored.
+The durable configuration file is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, default `~/.omp/agent/herdr-agents/config.json`. Package upgrades never overwrite it. Create it by copying the installed package's `config.json.example`, or run `/subagents-init`. The extension reads it at startup, so restart omp after any change. A package-root `config.json` is ignored.
 
 | Key | Default | Controls |
 | --- | --- | --- |
@@ -292,11 +288,11 @@ See [Configuration](docs/configuration.md) for every key, the task-model writer,
 
 ## Safety and uninstall
 
-- Child agents are real Pi processes running with your user account's permissions, inside Herdr panes. Worktrees isolate Git checkouts, not processes or permissions.
+- Child agents are real omp processes running with your user account's permissions, inside Herdr panes. Worktrees isolate Git checkouts, not processes or permissions.
 - The extension creates Herdr panes, tabs and managed worktrees only when a launch asks for them. It never pushes, merges, opens pull requests, deletes branches or removes worktrees on its own; cleanup is an explicit parent action ([worktree cleanup](docs/tools.md#explicit-worktree-cleanup)).
-- What it writes: `$PI_CODING_AGENT_DIR/herdr-agents/config.json` (only through `/subagents-init` or the writer tool, never on startup); per-launch artifacts under the parent session's `artifacts/<session-id>/` directory beside Pi's session store, which hold the child's full task text and any `systemPrompt` as Markdown files, activity snapshots and worktree manifests; and the child's own Pi session file. A managed worktree that carries its own `.pi/agent` directory receives that child's session inside the checkout. Treat task text as potentially sensitive when you share or inspect those files.
+- What it writes: `$PI_CODING_AGENT_DIR/herdr-agents/config.json` (only through `/subagents-init` or the writer tool, never on startup); per-launch artifacts under the parent session's `artifacts/<session-id>/` directory beside omp's session store, which hold the child's full task text and any `systemPrompt` as Markdown files, activity snapshots and worktree manifests; and the child's own Pi session file. A managed worktree that carries its own `.omp/agent` directory receives that child's session inside the checkout. Treat task text as potentially sensitive when you share or inspect those files.
 - Managed worktree children record their PID, process start time, boot ID, and PID namespace in `<session>.process.json` beside their session. Inside Herdr, the parent reads each child pane's agent session from Herdr and reports one display-only [sidebar marker](docs/configuration.md#sidebar-markers), the pane token `piha_delegated_v1`, on that pane through the Herdr socket. It writes no other pane metadata.
-- To uninstall: first list and remove any retained worktrees while the extension is still loaded (`/worktree list`, then `/worktree remove <target>`), because those commands leave with the package. If you installed the optional sidebar plugin, remove it with `herdr plugin uninstall pi-herdr-agents.sidebar` (or `herdr plugin unlink` for a linked copy). Then run `pi remove npm:pi-herdr-agents`, and delete `$PI_CODING_AGENT_DIR/herdr-agents/` and the `artifacts/` directories above if you no longer want the configuration and launch records.
+- To uninstall: first list and remove any retained worktrees while the extension is still loaded (`/subagent-worktree list`, then `/subagent-worktree remove <target>`), because those commands leave with the package. If you installed the optional sidebar plugin, remove it with `herdr plugin uninstall omp-herdr-agents.sidebar` (or `herdr plugin unlink` for a linked copy). Then run `omp plugin uninstall omp-herdr-agents`, and delete `$PI_CODING_AGENT_DIR/herdr-agents/` and the `artifacts/` directories above if you no longer want the configuration and launch records.
 
 ## Troubleshooting
 
@@ -311,7 +307,7 @@ More checks are in [Troubleshooting](docs/troubleshooting.md).
 
 | Page | Contents |
 | --- | --- |
-| [Tools and lifecycle](docs/tools.md) | Every tool and command, parameters, status labels, persistent specialists, interrupt, cancel, resume, and `/worktree` |
+| [Tools and lifecycle](docs/tools.md) | Every tool and command, parameters, status labels, persistent specialists, interrupt, cancel, resume, and `/subagent-worktree` |
 | [Configuration](docs/configuration.md) | `config.json`, model preferences, `/subagents-init`, init events, sidebar markers, supervision, and pane placement |
 | [Roles and custom agents](docs/roles.md) | Discovery, frontmatter reference, tool access control, and role packs |
 | [Worktree subagents](docs/worktree-subagents.md) | Worktree operation, review, recovery, and cleanup |

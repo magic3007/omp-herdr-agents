@@ -44,7 +44,7 @@
 						"type": "string"
 					},
 					"thinking": {
-						"description": "Pi thinking level. Pick the model tier first, then set thinking within that model's range: minimal/low for bounded mechanical work, medium for ordinary implementation or review, high+ for architecture, security, or hard diagnosis. Omitting still inherits the parent level; do not omit on orchestrated child work.",
+						"description": "Thinking level of the child. Pick the model tier first, then set thinking within that model's range: minimal/low for bounded mechanical work, medium for ordinary implementation or review, high+ for architecture, security, or hard diagnosis. Omitting still inherits the parent level; do not omit on orchestrated child work.",
 						"anyOf": [
 							{ "const": "off", "type": "string" },
 							{ "const": "minimal", "type": "string" },
@@ -106,7 +106,7 @@
 		{
 			"name": "subagent_cancel",
 			"scopes": ["parent", "child"],
-			"description": "Cancel a running ordinary (non-persistent) Pi-backed subagent, including an interrupted one: records terminal intent first, terminates its owned process, and delivers exactly one cancelled result. No model fallback, retry, or recovery starts after a cancel. An ordinary pane is closed; a managed-worktree child stops only its Pi process and keeps the workspace, checkout, commits, and manifest. Returns confirmed, requested (launch still in flight), unconfirmed (the run stays live; call again to retry), or already-terminal. Persistent specialists are rejected; use subagent_stop. Do not poll: the cancelled result arrives automatically.",
+			"description": "Cancel a running ordinary (non-persistent) omp-backed subagent, including an interrupted one: records terminal intent first, terminates its owned process, and delivers exactly one cancelled result. No model fallback, retry, or recovery starts after a cancel. An ordinary pane is closed; a managed-worktree child stops only its Pi process and keeps the workspace, checkout, commits, and manifest. Returns confirmed, requested (launch still in flight), unconfirmed (the run stays live; call again to retry), or already-terminal. Persistent specialists are rejected; use subagent_stop. Do not poll: the cancelled result arrives automatically.",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -130,7 +130,7 @@
 		{
 			"name": "subagent_interrupt",
 			"scopes": ["parent", "child"],
-			"description": "Send Escape to the active turn of a currently running Pi-backed subagent. The child pane, session, watcher, and running entry remain alive; this returns only a local acknowledgement and does not emit a subagent_result solely because of this request.",
+			"description": "Send Escape to the active turn of a currently running omp-backed subagent. The child pane, session, watcher, and running entry remain alive; this returns only a local acknowledgement and does not emit a subagent_result solely because of this request.",
 			"parameters": {
 				"type": "object",
 				"properties": {
@@ -148,7 +148,7 @@
 		{
 			"name": "subagent_resume",
 			"scopes": ["parent", "child"],
-			"description": "Resume a previous Pi-backed sub-agent session in a new herdr pane. This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing workspace. This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT poll for status. All of that is wasted work — the harness handles delivery for you. DO NOT fabricate or assume results. After resuming, either end your turn or work on other independent tasks; the harness will wake you when the result is ready. Use when a sub-agent was cancelled or needs follow-up work.",
+			"description": "Resume a previous omp-backed sub-agent session in a new herdr pane. This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing workspace. This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. DO NOT write polling loops, sleep/wait commands, tail/watch scripts, or repeatedly read session/log files to detect completion. DO NOT poll for status. All of that is wasted work — the harness handles delivery for you. DO NOT fabricate or assume results. After resuming, either end your turn or work on other independent tasks; the harness will wake you when the result is ready. Use when a sub-agent was cancelled or needs follow-up work.",
 			"parameters": {
 				"type": "object",
 				"required": ["sessionPath"],
@@ -219,7 +219,7 @@
 		{
 			"name": "subagents_write_task_models",
 			"scopes": ["parent"],
-			"description": "Validate and atomically replace models.tasks and models.tasksMeta in the durable Pi agent config, preserving unrelated settings. Supported categories: coding, review, recon, qa, architecture, docs. Partial nonempty categories are accepted; omitted categories are removed. Rejects duplicate exact refs within a category. Review the active authenticated registry and existing preferences first. Optional expectedConfigRevision makes the write conditional: it fails without replacing configuration when the config file no longer matches the revision the proposal was read from. Optional basis records what the ranking rests on; its kind must equal tasksMeta.method, and it is returned but not saved. Cooperating writes are serialized and fail on contention rather than waiting. Returns normalized saved preferences, missing categories, the configRevision of the written file, and any basis; reload required.",
+			"description": "Validate and atomically replace models.tasks and models.tasksMeta in the durable host agent config, preserving unrelated settings. Supported categories: coding, review, recon, qa, architecture, docs. Partial nonempty categories are accepted; omitted categories are removed. Rejects duplicate exact refs within a category. Review the active authenticated registry and existing preferences first. Optional expectedConfigRevision makes the write conditional: it fails without replacing configuration when the config file no longer matches the revision the proposal was read from. Optional basis records what the ranking rests on; its kind must equal tasksMeta.method, and it is returned but not saved. Cooperating writes are serialized and fail on contention rather than waiting. Returns normalized saved preferences, missing categories, the configRevision of the written file, and any basis; reload required.",
 			"parameters": {
 				"type": "object",
 				"required": ["tasks", "tasksMeta"],
@@ -352,19 +352,19 @@
 			"description": "Spawn a subagent: /subagent <agent> <task>; list agents: /subagent list"
 		},
 		{
-			"name": "subagents-init",
-			"scopes": ["parent"],
-			"description": "Draft task-category model preferences from the live registry; optional arguments set ranking preferences"
-		},
-		{
-			"name": "worktree",
+			"name": "subagent-worktree",
 			"scopes": ["child"],
 			"description": "Fork this session into a worktree; use /worktree list to inspect them"
 		},
 		{
-			"name": "worktree",
+			"name": "subagent-worktree",
 			"scopes": ["parent"],
 			"description": "Fork into a worktree, list retained worktrees, or explicitly remove one"
+		},
+		{
+			"name": "subagents-init",
+			"scopes": ["parent"],
+			"description": "Draft task-category model preferences from the live registry; optional arguments set ranking preferences"
 		}
 	]
 }

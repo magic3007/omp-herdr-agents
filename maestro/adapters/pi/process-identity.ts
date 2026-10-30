@@ -124,6 +124,34 @@ export function createLinuxProcessProbe(
 export const linuxProcessProbe = createLinuxProcessProbe();
 
 /**
+ * Names a child harness process may carry.
+ *
+ * The harness CLI renames itself (`pi`, `omp`), but a runtime host can keep
+ * the interpreter name when the rename does not take effect (`bun`, `node`).
+ * The check is therefore harness-agnostic; the per-launch session environment
+ * value stays the durable signal that names one specific child.
+ */
+const HARNESS_PROCESS_NAMES = {
+	pi: true,
+	omp: true,
+	bun: true,
+	node: true,
+} satisfies Record<string, true>;
+
+/** Whether a reported process may be a child harness process. */
+export function isHarnessProcessName(process: {
+	name?: string;
+	argv0?: string;
+}): boolean {
+	const argv0Name = process.argv0?.split("/").pop();
+	return [process.name, argv0Name].some(
+		(candidate) =>
+			candidate !== undefined &&
+			Object.hasOwn(HARNESS_PROCESS_NAMES, candidate),
+	);
+}
+
+/**
  * A process's environment as it was at exec. Unlike its command line, Pi's
  * process-title rewrite leaves this intact. `undefined` only when no such PID
  * exists; throws on non-Linux hosts and any other read failure.

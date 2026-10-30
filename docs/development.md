@@ -4,11 +4,11 @@ This page is for contributors. Read [`AGENTS.md`](../AGENTS.md) for repository r
 
 ## Code map
 
-The maestro seams remain inside one npm package with the same Pi extension
-entry point. Pi is the sole real harness and Herdr the sole real surface
+The maestro seams remain inside one npm package with the same omp extension
+entry point. omp is the sole real harness and Herdr the sole real surface
 provider; fakes are for conformance tests only.
 
-- `pi-extension/subagents/index.ts` — Pi composition root: loads config,
+- `pi-extension/subagents/index.ts` — omp composition root: loads config,
   adopts the reload-surviving runtime, builds the per-load controllers, and
   registers session handlers, tools, commands, and renderers in order. It also
   holds the `__test__` surface.
@@ -19,7 +19,7 @@ provider; fakes are for conformance tests only.
   `persistent.ts`, `delivery.ts`, `launch.ts` — per-load controllers
   (`create*`) for activity observation, the widget and status refresh,
   interrupt/cancel, persistent specialists, parent delivery, and launch plans.
-  `index.ts` creates each once per module load, because tests and `/reload`
+  `index.ts` creates each once per module load, because tests and a session reload
   re-import it and its config and timers must not be shared.
 - `pi-extension/subagents/launch-tools.ts`, `control-tools.ts`,
   `worktree-tools.ts`, `task-models.ts`, `renderers.ts` — `register*`
@@ -34,7 +34,7 @@ provider; fakes are for conformance tests only.
   config loaders with injected directories, and task-model init prompt logic.
 - `maestro/core/worktree.ts`, `maestro/core/worktree-cleanup.ts` — manifest
   schema/state, handoff types, and cleanup eligibility/formatting.
-- `maestro/adapters/pi/` — Pi launch, completion, session I/O, activity files,
+- `maestro/adapters/pi/` — omp launch, completion, session I/O, activity files,
   model SDK glue, and registry projection behind `PiHarnessAdapter`;
   `skills.ts` discovers a role's declared skills by reading files only (no
   extension loading or package installs), enforces their size caps and formats
@@ -44,7 +44,7 @@ provider; fakes are for conformance tests only.
   terminal scripts/placement, and `herdr-socket.ts`, the bounded socket
   client for pane metadata.
 - `maestro/runtime/` — run ownership, controls/retries, observation,
-  delivery-gated cleanup, Pi composition, worktree operations/handoff,
+  delivery-gated cleanup, omp composition, worktree operations/handoff,
   task-model init composition, and sidebar markers (`delegated-marker.ts`).
 - `plugins/sidebar/` — the optional Herdr plugin. Its `sidebar.mjs` uses Node
   built-ins only and imports nothing from the extension, so Herdr can install
@@ -83,9 +83,9 @@ Run the required end-to-end suite from inside Herdr:
 npm run test:integration
 ```
 
-Start the Herdr server with Node.js 22.19+ on its `PATH`, because test panes inherit the server's environment, not the test runner's: Pi 1.0.0 needs Node.js 22.19+ and crashes at startup on versions older than 22.15.
+Start the Herdr server with Node.js 22.19+ on its `PATH`, because test panes inherit the server's environment, not the test runner's: the host runtime needs Node.js 22.19+ and crashes at startup on versions older than 22.15.
 
-The deterministic suite launches real Pi sessions, Herdr panes, and worktrees without provider credentials. The optional live-provider smoke test is not a merge gate:
+The deterministic suite launches real omp sessions, Herdr panes, and worktrees without provider credentials. The optional live-provider smoke test is not a merge gate:
 
 ```bash
 PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 \

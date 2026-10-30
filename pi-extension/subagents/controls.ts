@@ -15,7 +15,7 @@ interface SubagentInterruptDetails {
 }
 
 export const SUBAGENT_CANCEL_DESCRIPTION =
-	"Cancel a running ordinary (non-persistent) Pi-backed subagent, including an interrupted one: " +
+	"Cancel a running ordinary (non-persistent) omp-backed subagent, including an interrupted one: " +
 	"records terminal intent first, terminates its owned process, and delivers exactly one cancelled result. " +
 	"No model fallback, retry, or recovery starts after a cancel. " +
 	"An ordinary pane is closed; a managed-worktree child stops only its Pi process and keeps the workspace, checkout, commits, and manifest. " +

@@ -53,10 +53,10 @@ function run(action, socketPath, env = {}) {
 
 describe("sidebar plugin contract", () => {
 	it("hides only a live marker on an idle, working, or done agent", () => {
-		assert.equal(VIEW_SOURCE, "plugin:pi-herdr-agents.sidebar");
+		assert.equal(VIEW_SOURCE, "plugin:omp-herdr-agents.sidebar");
 		// One `filter` under `not`; Herdr rejects a `filters` array there.
 		assert.deepEqual(FOCUS_PARAMS, {
-			source: "plugin:pi-herdr-agents.sidebar",
+			source: "plugin:omp-herdr-agents.sidebar",
 			label: "focus",
 			filter: {
 				op: "not",
@@ -94,8 +94,8 @@ describe("sidebar plugin contract", () => {
 
 	it("declares Focus and All with an honest platform and version floor", () => {
 		const manifest = readFileSync(join(pluginDir, "herdr-plugin.toml"), "utf8");
-		assert.match(manifest, /^id = "pi-herdr-agents\.sidebar"$/m);
-		assert.match(manifest, /^name = "Pi Herdr Agents Sidebar"$/m);
+		assert.match(manifest, /^id = "omp-herdr-agents\.sidebar"$/m);
+		assert.match(manifest, /^name = "omp Herdr Agents Sidebar"$/m);
 		assert.match(
 			manifest,
 			// 0.9.0 is the first release with the agent view API the actions call.

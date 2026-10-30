@@ -393,7 +393,7 @@ export function registerResumeTool(
 			name: "subagent_resume",
 			label: "Resume Subagent",
 			description:
-				"Resume a previous Pi-backed sub-agent session in a new herdr pane. " +
+				"Resume a previous omp-backed sub-agent session in a new herdr pane. " +
 				"This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing workspace. " +
 				"This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
 				"When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
@@ -401,7 +401,7 @@ export function registerResumeTool(
 				"DO NOT fabricate or assume results. After resuming, either end your turn or work on other independent tasks; the harness will wake you when the result is ready. " +
 				"Use when a sub-agent was cancelled or needs follow-up work.",
 			promptSnippet:
-				"Resume a previous Pi-backed sub-agent session in a new herdr pane. " +
+				"Resume a previous omp-backed sub-agent session in a new herdr pane. " +
 				"This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing workspace. " +
 				"This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
 				"When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +

@@ -205,7 +205,7 @@ export function writeSubagentSessionPolicy(
 function policyError(sessionFile: string, reason: string): Error {
 	return new Error(
 		`Cannot safely resume ${sessionFile}: ${reason}. ` +
-			"Start a new subagent with the required restrictions, or manually resume it only after choosing an explicit Pi tool policy.",
+			"Start a new subagent with the required restrictions, or manually resume it only after choosing an explicit harness tool policy.",
 	);
 }
 
@@ -619,21 +619,29 @@ export function seedSubagentSessionFile(params: {
 }
 
 /**
- * Copy only the active Pi branch into a session rooted at another cwd.
- * Pi's native branched-session writer supplies compaction and label fidelity;
- * the temporary source-directory file is rewritten with the target cwd.
+ * Copy only the active branch into a session rooted at another cwd.
+ * The harness's native branched-session writer supplies compaction and label
+ * fidelity; the temporary source-directory file is rewritten with the target
+ * cwd.
+ *
+ * `SessionManager.open` is synchronous in upstream pi and asynchronous in
+ * `omp`, so the open calls are awaited and the fork is asynchronous too.
  */
-export function createWorktreeSessionFork(params: {
+export async function createWorktreeSessionFork(params: {
 	parentSessionFile: string;
 	leafId: string;
 	childSessionFile: string;
 	childCwd: string;
 	handoffMessage: string;
-}): WorktreeSessionFork {
-	const source = SessionManager.open(params.parentSessionFile);
+}): Promise<WorktreeSessionFork> {
+	// `SessionManager.open` is synchronous in upstream pi and asynchronous in
+	// `omp`; awaiting the result covers both without a runtime branch.
+	const source = await Promise.resolve(
+		SessionManager.open(params.parentSessionFile),
+	);
 	const temporaryFile = source.createBranchedSession(params.leafId);
 	if (!temporaryFile || !existsSync(temporaryFile)) {
-		throw new Error("Pi did not persist the worktree session fork");
+		throw new Error("The harness did not persist the worktree session fork");
 	}
 
 	try {
@@ -653,7 +661,10 @@ export function createWorktreeSessionFork(params: {
 		rmSync(temporaryFile, { force: true });
 	}
 
-	SessionManager.open(params.childSessionFile).appendCustomMessageEntry(
+	const child = await Promise.resolve(
+		SessionManager.open(params.childSessionFile),
+	);
+	child.appendCustomMessageEntry(
 		"pi-herdr-worktree-handoff",
 		params.handoffMessage,
 		true,
@@ -824,29 +835,78 @@ export interface ObservedSessionRuntime {
 	thinking?: string;
 }
 
-/** Read the effective model and thinking entries recorded by Pi at session startup. */
+/**
+ * The model a `model_change` entry records.
+ *
+ * Upstream pi writes the provider and the model id separately; `omp` may
+ * write one combined `provider/model` ref instead.
+ */
+function readModelChange(
+	entry: SessionEntry,
+): { provider: string; modelId: string } | undefined {
+	if (isString(entry.provider) && isString(entry.modelId))
+		return { provider: entry.provider, modelId: entry.modelId };
+	if (isString(entry.model)) {
+		const separator = entry.model.indexOf("/");
+		if (separator > 0)
+			return {
+				provider: entry.model.slice(0, separator),
+				modelId: entry.model.slice(separator + 1),
+			};
+	}
+	return undefined;
+}
+
+/**
+ * Read the effective model and thinking the session recorded.
+ *
+ * The harness writes the model it actually ran on every assistant message, so
+ * the newest assistant message names the model in force. `model_change`
+ * entries are the fallback: they record the model a session started with, and
+ * a resumed session may never write one.
+ */
 export function findObservedSessionRuntime(
 	entries: SessionEntry[],
 ): ObservedSessionRuntime {
 	const observed: ObservedSessionRuntime = {};
+	let assistantProvider: string | undefined;
+	let assistantModel: string | undefined;
 	for (const entry of entries) {
 		if (entry.type === "model_change") {
-			if (isString(entry.provider)) observed.provider = entry.provider;
-			if (isString(entry.modelId)) observed.modelId = entry.modelId;
+			const change = readModelChange(entry);
+			if (change) {
+				observed.provider = change.provider;
+				observed.modelId = change.modelId;
+			}
 		} else if (
 			entry.type === "thinking_level_change" &&
 			isString(entry.thinkingLevel)
 		) {
 			observed.thinking = entry.thinkingLevel;
+		} else if (entry.type === "message") {
+			const message = entry.message;
+			if (
+				isRecord(message) &&
+				message.role === "assistant" &&
+				isString(message.provider) &&
+				isString(message.model)
+			) {
+				assistantProvider = message.provider;
+				assistantModel = message.model;
+			}
 		}
+	}
+	if (assistantProvider && assistantModel) {
+		observed.provider = assistantProvider;
+		observed.modelId = assistantModel;
 	}
 	return observed;
 }
 
 /**
- * The model Pi restores when this session is resumed without `--model`: the
- * latest `model_change` on the active branch (leaf = last entry, followed
- * through `parentId`), else the latest assistant response's model.
+ * The model the session restores when it is resumed without `--model`: the
+ * model the newest assistant message on the active branch (leaf = last entry,
+ * followed through `parentId`) ran on, else the latest `model_change`.
  */
 export function findStoredSessionModel(
 	entries: SessionEntry[],
@@ -865,17 +925,6 @@ export function findStoredSessionModel(
 	const observed = findObservedSessionRuntime(branch);
 	if (observed.provider && observed.modelId)
 		return { provider: observed.provider, modelId: observed.modelId };
-	for (let index = branch.length - 1; index >= 0; index--) {
-		const message = branch[index].message;
-		if (
-			branch[index].type === "message" &&
-			isRecord(message) &&
-			message.role === "assistant" &&
-			isString(message.provider) &&
-			isString(message.model)
-		)
-			return { provider: message.provider, modelId: message.model };
-	}
 	return undefined;
 }
 

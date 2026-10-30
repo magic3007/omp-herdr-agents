@@ -134,10 +134,11 @@ const parentToolTable = (tools: CapturedTool[]) =>
 export const COMMAND_USAGE = {
 	subagent: ["/subagent <agent> <task>", "/subagent list"],
 	"subagents-init": ["/subagents-init [preferences]"],
-	worktree: [
-		"/worktree <name> [task]",
-		"/worktree list",
-		"/worktree remove <target>",
+	// Not `/worktree`: omp reserves that name for its built-in `/wt` alias.
+	"subagent-worktree": [
+		"/subagent-worktree <name> [task]",
+		"/subagent-worktree list",
+		"/subagent-worktree remove <target>",
 	],
 } as const satisfies Record<string, readonly string[]>;
 
@@ -187,7 +188,7 @@ function renderBlock(
 				parentToolTable(parentTools),
 			].join("\n");
 		case "child-tools":
-			return toolTable(childOnly).replace("| Tool |", "| Pi child-only tool |");
+			return toolTable(childOnly).replace("| Tool |", "| Child-only tool |");
 		case "commands": {
 			const usage = commandUsage(snapshot.commands);
 			return table(

@@ -12,11 +12,11 @@ jq -c 'select(.type == "custom_message" and .customType == "subagent_result")' "
 
 If the entry exists, spawning and result extraction worked; investigate parent wake-up and model-facing delivery rather than the child process. Completion wake-ups must contain the bounded result directly—do not send a separate message that merely tells the parent to look at an adjacent custom message.
 
-Git package refs are pinned. To move an installed development copy back to the current `main`, install that ref explicitly and reload the active Pi session:
+Git package refs are pinned. To move an installed development copy back to the current `main`, install that ref explicitly and restart the active omp session:
 
 ```bash
-pi install git:github.com/giuseppecrj/pi-herdr-agents@main
-# Then run /reload inside Pi.
+omp plugin install git:github.com/magic3007/omp-herdr-agents@main
+# Then restart omp.
 ```
 
 Smoke-test delivery with an autonomous subagent instructed to return one exact marker. Success means the marker itself—not only a generic wake-up notice—automatically appears in the parent turn.
@@ -33,8 +33,8 @@ A catalog-listed model and configured authentication do not prove that your prov
 
 ## Worktree removal is refused
 
-Removal reports each blocker, such as dirty files, a live process, or an unknown inspection. Commit the work or pass `--preserve`, stop any process in the checkout, and start the parent Pi session at the source repository or an ancestor of it. See [Explicit worktree cleanup](tools.md#explicit-worktree-cleanup) and [cleanup and recovery](worktree-subagents.md#cleanup).
+Removal reports each blocker, such as dirty files, a live process, or an unknown inspection. Commit the work or pass `--preserve`, stop any process in the checkout, and start the parent omp session at the source repository or an ancestor of it. See [Explicit worktree cleanup](tools.md#explicit-worktree-cleanup) and [cleanup and recovery](worktree-subagents.md#cleanup).
 
 ## Sidebar Focus hides nothing
 
-Focus applies at the first agent Herdr detects after install, so launch or start an agent first. If you ran All, Focus stays off until you run Focus. Check that the parent loads a `pi-herdr-agents` release newer than `3.3.1` (older releases also need `"sidebar": { "enabled": true }` in `config.json`), that you ran `/reload` in the parent after installing or upgrading it, and that you launched the child after the reload. Run `herdr pane get <child-pane-id>`: the pane must report the child's session file as `agent_session`. If it reports none, install Herdr's Pi integration with `herdr integration install pi` in the agent directory children use, then launch new children. Read the plugin log with `herdr plugin log list --plugin pi-herdr-agents.sidebar`. See the plugin's [troubleshooting](../plugins/sidebar/README.md#troubleshooting).
+Focus applies at the first agent Herdr detects after install, so launch or start an agent first. If you ran All, Focus stays off until you run Focus. Check that the parent loads an `omp-herdr-agents` release (the upstream `pi-herdr-agents` releases `3.2.0` through `3.3.1` also needed `"sidebar": { "enabled": true }` in `config.json`), that you restarted the parent after installing or upgrading it, and that you launched the child after the restart. Run `herdr pane get <child-pane-id>`: the pane must report the child's session file as `agent_session`. If it reports none, install Herdr's omp integration with `herdr integration install omp` in the agent directory children use, then launch new children. Read the plugin log with `herdr plugin log list --plugin omp-herdr-agents.sidebar`. See the plugin's [troubleshooting](../plugins/sidebar/README.md#troubleshooting).

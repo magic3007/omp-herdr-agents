@@ -237,3 +237,63 @@ test("Task17 all five config owners use only the explicit config directory and e
 		rmSync(root, { recursive: true, force: true });
 	}
 });
+
+test("project role definitions live in the injected config directory name", () => {
+	const root = mkdtempSync(join(tmpdir(), "core-role-config-dir-"));
+	try {
+		const agentDir = join(root, "agent");
+		const cwd = join(root, "project");
+		const ompAgents = join(cwd, ".omp", "agents");
+		const piAgents = join(cwd, ".pi", "agents");
+		for (const dir of [join(agentDir, "agents"), ompAgents, piAgents])
+			mkdirSync(dir, { recursive: true });
+		const role = (dir: string, name: string) =>
+			writeFileSync(
+				join(dir, `${name}.md`),
+				`---\nname: ${name}\ndescription: ${name}\n---\n${name} body`,
+			);
+		role(ompAgents, "omp-role");
+		role(piAgents, "pi-role");
+
+		const ompCatalog = discoverAgentCatalog({
+			agentConfigDir: agentDir,
+			cwd,
+			configDirName: ".omp",
+		});
+		assert.deepEqual(
+			ompCatalog.agents.map((agent) => agent.name),
+			["omp-role"],
+		);
+		assert.equal(ompCatalog.agents[0].source, "project");
+
+		const piCatalog = discoverAgentCatalog({ agentConfigDir: agentDir, cwd });
+		assert.deepEqual(
+			piCatalog.agents.map((agent) => agent.name),
+			["pi-role"],
+		);
+		assert.equal(piCatalog.agents[0].source, "project");
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test("the role config deprecation names the injected project role directory", () => {
+	const root = mkdtempSync(join(tmpdir(), "core-role-config-name-"));
+	try {
+		const configDir = join(root, "config");
+		mkdirSync(configDir);
+		const example = join(root, "config.json.example");
+		writeFileSync(example, JSON.stringify({ roles: { bundled: false } }));
+
+		const [ompDeprecation] = loadRoleConfig(configDir, example, {
+			configDirName: ".omp",
+		}).deprecations;
+		assert.match(ompDeprecation, /\.omp\/agents/);
+		assert.doesNotMatch(ompDeprecation, /\.pi\/agents/);
+
+		const [piDeprecation] = loadRoleConfig(configDir, example).deprecations;
+		assert.match(piDeprecation, /\.pi\/agents/);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});

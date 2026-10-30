@@ -20,7 +20,11 @@ import {
 	readOwnProcessIdentity,
 	writeProcessIdentityRecord,
 } from "../process-identity.ts";
-import { isString } from "../../../core/config/type-guards.ts";
+import {
+	isRecord,
+	isString,
+	type JsonObject,
+} from "../../../core/config/type-guards.ts";
 import { hasUndeliveredChildren } from "../../../core/undelivered-children.ts";
 
 export function shouldMarkUserTookOver(agentStarted: boolean): boolean {
@@ -91,6 +95,53 @@ export function buildCompletionSidecar(
 	| { type: "error"; errorMessage: string; stopReason: "error" } {
 	const errorInfo = findLatestAssistantError(messages);
 	return errorInfo ? { type: "error", ...errorInfo } : { type: "done" };
+}
+
+/**
+ * omp reports settle state on `agent_end`; pi only has `agent_settled`. These
+ * shapes live here so the child keeps one code path for both runtimes: the
+ * fields are optional, and pi simply never sets them.
+ *
+ * `SessionMessages` mirrors what the existing evidence helpers already accept,
+ * so the settle path adds no second message type of its own.
+ */
+type SessionMessages = Parameters<typeof buildCompletionSidecar>[0];
+type SessionMessage = NonNullable<SessionMessages>[number];
+
+export interface SettleState {
+	/** An automatic continuation follows: retry, fallback, compaction, or background work. */
+	continues: boolean;
+}
+
+/**
+ * Read the settle fields `agent_end` carries on the host but that the pi SDK's
+ * event type does not name. The fields are decoded here, at the event
+ * boundary, so the handler branches on a domain value.
+ */
+export function readSettleState(fields: JsonObject): SettleState {
+	return {
+		continues:
+			fields.willContinue === true || fields.awaitingAsyncWork === true,
+	};
+}
+
+export interface SettleContext {
+	isIdle(): boolean;
+	hasPendingMessages(): boolean;
+	ui?: { getEditorText?(): string };
+	sessionManager: { getBranch(): { type: string; message?: SessionMessage }[] };
+	shutdown(): void;
+}
+
+/** A run the user aborted stays open for inspection instead of exiting. */
+export function lastAssistantAborted(messages: SessionMessages): boolean {
+	if (!messages) return false;
+	for (let i = messages.length - 1; i >= 0; i--) {
+		const message = messages[i];
+		if (message?.role !== "assistant") continue;
+		return message.stopReason === "aborted";
+	}
+	return false;
 }
 
 export function buildPersistentTaskEvent(task: string, generation: string) {
@@ -264,7 +315,12 @@ export default function (pi: ExtensionAPI) {
 		recorder.agentStart();
 	});
 
-	pi.on("agent_end", (event) => {
+	// The child runs omp, whose settle contract replaces pi's `agent_settled`: a
+	// settle arrives as `agent_end`, and an automatic continuation (retry, model
+	// fallback, compaction, background work) reports `willContinue`. A queued
+	// steer or follow-up is not flagged there, so a session that still holds
+	// pending messages is not settled either.
+	pi.on("agent_end", (event, ctx) => {
 		latestAgentMessages = event.messages;
 		recorder.agentEndWaiting();
 		if (autoExit) {
@@ -272,11 +328,19 @@ export default function (pi: ExtensionAPI) {
 			// the latest agent turn completed normally, not by who initiated it.
 			userTookOver = false;
 		}
+		const settleState = readSettleState(isRecord(event) ? event : {});
+		if (settleState.continues) return;
+		if (ctx.hasPendingMessages()) return;
+		settle(ctx);
 	});
 
-	pi.on("agent_settled", (event, ctx) => {
+	function settle(ctx: SettleContext) {
 		if (doneNudge && !completionFinalized) {
-			doneNudge.settled(latestAgentMessages, event?.aborted === true, ctx);
+			doneNudge.settled(
+				latestAgentMessages,
+				lastAssistantAborted(latestAgentMessages),
+				ctx,
+			);
 		}
 		if (persistent && !completionFinalized) {
 			let messages = latestAgentMessages;
@@ -339,7 +403,7 @@ export default function (pi: ExtensionAPI) {
 
 		recorder.agentEndDone();
 		ctx.shutdown();
-	});
+	}
 
 	pi.on("turn_start", (event) => {
 		recorder.turnStart(event.turnIndex);

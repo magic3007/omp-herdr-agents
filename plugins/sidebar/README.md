@@ -1,4 +1,4 @@
-# Pi Herdr Agents Sidebar
+# omp Herdr Agents Sidebar
 
 ![Pi Herdr Agents: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-agents/main/docs/assets/pi-herdr-agents-gallery.png)
 
@@ -64,7 +64,7 @@ Use `pi list` to check your existing package sources. If a copy from another sou
 After you launch a new child, a marked child with status `idle`, `working`, or `done` disappears from the Agents view while your main session stays. Blocked children remain visible. Run All to show the hidden row again. If nothing changes, read the action log:
 
 ```bash
-herdr plugin log list --plugin pi-herdr-agents.sidebar
+herdr plugin log list --plugin omp-herdr-agents.sidebar
 ```
 
 Then check the child's pane. It should report the child's session file as `agent_session` and carry the `piha_delegated_v1` token:
@@ -85,8 +85,8 @@ herdr pane get <child-pane-id>
 Run an action from the command line:
 
 ```bash
-herdr plugin action invoke pi-herdr-agents.sidebar.focus
-herdr plugin action invoke pi-herdr-agents.sidebar.all
+herdr plugin action invoke omp-herdr-agents.sidebar.focus
+herdr plugin action invoke omp-herdr-agents.sidebar.all
 ```
 
 To bind a key, add an entry like this to your Herdr config and pick a key you do not already use:
@@ -95,7 +95,7 @@ To bind a key, add an entry like this to your Herdr config and pick a key you do
 [[keys.command]]
 key = "prefix+g"
 type = "plugin_action"
-command = "pi-herdr-agents.sidebar.focus"
+command = "omp-herdr-agents.sidebar.focus"
 description = "hide delegated Pi children"
 ```
 
@@ -103,7 +103,7 @@ Focus is on by default. Run an action to change it. Your last choice is saved in
 
 Herdr keeps one agent view for the whole server. Because of that, the hooks replace another tool's view whenever Herdr detects an agent, unless you chose All. Focus replaces the view that was active, including a view that another tool set. All sends its clear with this plugin as the source, so Herdr clears the view only if this plugin owns it. If another tool replaced Focus, All leaves that view in place and reports which tool owns it.
 
-Each action writes one message to its log. Read it with `herdr plugin log list --plugin pi-herdr-agents.sidebar`. The exit status tells you what happened:
+Each action writes one message to its log. Read it with `herdr plugin log list --plugin omp-herdr-agents.sidebar`. The exit status tells you what happened:
 
 | Exit status | Meaning |
 | --- | --- |
@@ -136,7 +136,7 @@ A Herdr server restart drops the view and every marker. The startup hook and the
 2. Remove the plugin:
 
    ```bash
-   herdr plugin uninstall pi-herdr-agents.sidebar
+   herdr plugin uninstall omp-herdr-agents.sidebar
    ```
 
 The extension keeps marking children after you uninstall the plugin. Without the plugin nothing reads the markers, so they change nothing you see. Uninstall the extension to stop them.

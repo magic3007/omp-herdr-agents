@@ -136,11 +136,11 @@ export function registerControlTools(
 			name: "subagent_interrupt",
 			label: "Interrupt Subagent",
 			description:
-				"Send Escape to the active turn of a currently running Pi-backed subagent. " +
+				"Send Escape to the active turn of a currently running omp-backed subagent. " +
 				"The child pane, session, watcher, and running entry remain alive; this returns only a local acknowledgement " +
 				"and does not emit a subagent_result solely because of this request.",
 			promptSnippet:
-				"Send Escape to the active turn of a currently running Pi-backed subagent. " +
+				"Send Escape to the active turn of a currently running omp-backed subagent. " +
 				"The child pane, session, watcher, and running entry remain alive; this returns only a local acknowledgement " +
 				"and does not emit a subagent_result solely because of this request.",
 			parameters: Type.Object({

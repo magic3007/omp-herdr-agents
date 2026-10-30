@@ -19,6 +19,7 @@ import { sessionModelRegistry } from "./model-registry.ts";
 import { loadModelConfig } from "../../maestro/core/config/model-config.ts";
 import {
 	getAgentConfigDir,
+	getConfigDirName,
 	getSubagentsConfigDir,
 	getSubagentsConfigExamplePath,
 	getSubagentsConfigPath,
@@ -133,6 +134,7 @@ const modelConfig = loadModelConfig(getSubagentsConfigDir());
 const roleConfig = loadRoleConfig(
 	getSubagentsConfigDir(),
 	getSubagentsConfigExamplePath(),
+	{ configDirName: getConfigDirName() },
 );
 const persistentConfig = loadPersistentConfig(
 	getSubagentsConfigDir(),
@@ -447,7 +449,7 @@ export default function subagentsExtension(
 	pi.on("session_shutdown", async (event, _ctx) => {
 		stopChildBusy();
 		stopRefresh();
-		// Pi invalidates this context and API once shutdown returns. Watchers that
+		// The host invalidates this context and API once shutdown returns. Watchers that
 		// survive a reload must neither read the context nor send through the API;
 		// completions that settle before the next session_start are held.
 		runtime.latestCtx = undefined;

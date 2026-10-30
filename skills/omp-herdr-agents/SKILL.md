@@ -1,9 +1,9 @@
 ---
-name: pi-herdr-agents
-description: Operate the pi-herdr-agents host. Use when asked to launch, delegate to, supervise, interrupt, cancel, stop, resume, or clean up Pi subagents; to use worktrees, persistent specialists, or model routing; to edit the host's config.json or task-model preferences; to install, configure, troubleshoot, or uninstall the optional Herdr sidebar plugin; or when a child looks hung, stalled, or unwanted.
+name: omp-herdr-agents
+description: Operate the omp-herdr-agents host. Use when asked to launch, delegate to, supervise, interrupt, cancel, stop, resume, or clean up omp subagents; to use worktrees, persistent specialists, or model routing; to edit the host's config.json or task-model preferences; to install, configure, troubleshoot, or uninstall the optional Herdr sidebar plugin; or when a child looks hung, stalled, or unwanted.
 ---
 
-# pi-herdr-agents operating guide
+# omp-herdr-agents operating guide
 
 ## Authority and version caveat
 
@@ -13,13 +13,34 @@ authoritative; this guide is a summary. Check the installed version and which
 source from another branch or release. Resolve this guide's relative links
 from its directory, not the user's working directory.
 
-## What the host is
+## How a child runs
 
-A Pi extension that runs asynchronous Pi child agents exclusively inside Herdr
-(the terminal multiplexer; Pi must be started from inside Herdr). It is a
+A child is a real `omp` process in a Herdr pane. The host seeds the child's
+session file, then launches the child as:
+
+```text
+cd '<cwd>' && <env…> omp -r '<sessionFile>' --hook '<child hook>' --model '<provider/model>' --thinking '<level>' '<task>'
+```
+
+- `omp -r <file>` adopts the seeded session file. The file must already exist
+  and be non-empty; omp continues that exact session instead of creating a new
+  one.
+- `--hook <file>` loads the child protocol hook. It replaces the Pi-era `-e`
+  flag.
+- The child settles on omp's `agent_end` event. A settle is final only when
+  `willContinue` is absent: an event with `willContinue: true` means a retry,
+  model fallback, or compaction follows, so the run is not finished. There is
+  no `agent_settled` event and no `session_idle` event in this runtime.
+- A child that still holds queued follow-up messages is not settled either.
+
+Resume a recorded child session with `omp -r <sessionFile>`.
+
+
+An omp extension that runs asynchronous omp child agents exclusively inside Herdr
+(the terminal multiplexer; omp must be started from inside Herdr). It is a
 pack-neutral execution host: it ships no agent roles and no planning or review
 workflows. Roles and workflows come from project or global definitions and
-installed role packs. Children are real Pi processes in Herdr panes; ordinary
+installed role packs. Children are real omp processes in Herdr panes; ordinary
 children are grouped in extension-owned `Agents` tabs by default.
 
 ## Results arrive automatically: never poll
@@ -53,8 +74,8 @@ single or sequential writer can work in the parent checkout.
 
 ## Roles and role packs
 
-A named `agent` resolves by precedence: project (`.pi/agents/`), then global
-(`$PI_CODING_AGENT_DIR/agents/`, default `~/.pi/agent/agents/`), then roles
+A named `agent` resolves by precedence: project (`<cwd>/.omp/agents/`), then global
+(`$PI_CODING_AGENT_DIR/agents/`, default `~/.omp/agent/agents/`), then roles
 registered by installed role packs. An empty catalog is valid. `subagents_list`
 and `/subagent list` show each visible role and its source. Roles that request
 an external CLI (`cli`) fail before launch. Role frontmatter can set
@@ -137,10 +158,10 @@ Termination follows ownership:
 - **Ordinary pane:** the pane is closed. Confirmed means Herdr reports the pane
   absent; this is not a separate OS process check.
 - **Worktree child:** pane, workspace, checkout, and commits are never closed
-  or removed. SIGTERM goes only to the child's Pi process identity verified
+  or removed. SIGTERM goes only to the child's omp process identity verified
   at launch (PID and start time, never command-line text); confirmed when
   that identity no longer exists, or when the pane is gone while it is not
-  known alive. A live identity (such as a suspended Pi) leaves it
+  known alive. A live identity (such as a suspended omp process) leaves it
   `unconfirmed`. One not captured (including on non-Linux hosts),
   unreadable, or whose PID now names another process is never signalled and
   leaves it `unconfirmed` unless pane absence confirms termination. A retry
@@ -192,7 +213,7 @@ tools above.
 
 ## Worktrees
 
-`worktree: { branch, base? }` (or `/worktree <name> [task]` to continue the
+`worktree: { branch, base? }` (or `/subagent-worktree <name> [task]` to continue the
 current conversation in a new interactive session there). Use one per parallel
 independent writer.
 
@@ -207,9 +228,9 @@ independent writer.
   SHA, and do not push, merge, switch branches, or remove. The extension never
   pushes, merges, creates PRs, or auto-removes anything. The parent owns review,
   integration, and publication.
-- `worktree_list({})` / `/worktree list` is read-only inventory with cleanup
+- `worktree_list({})` / `/subagent-worktree list` is read-only inventory with cleanup
   blockers. Startup does not scan it.
-- `worktree_remove({ target, preserve? })` / `/worktree remove <target>
+- `worktree_remove({ target, preserve? })` / `/subagent-worktree remove <target>
   [--preserve]` is explicit, parent-only, and needs separate authorization;
   stopping or interrupting a child never authorizes cleanup. Removal never
   closes the source repository's primary workspace. If this process's create
@@ -223,15 +244,15 @@ independent writer.
 initialized submodules). Ignored files are neither blockers nor preserved by
 `preserve`; their counts are reported. Branches
   are never deleted. Cleanup works from a parent session rooted at the principal
-  checkout or an ancestor; `cd` inside Pi does not change that.
+  checkout or an ancestor; `cd` inside omp does not change that.
 - `subagent_resume` rejects managed-worktree sessions. Continue in the
   retained workspace only after the previous process has exited.
 
 ## Configuration
 
 Durable config: `$PI_CODING_AGENT_DIR/herdr-agents/config.json` (default
-`~/.pi/agent/herdr-agents/config.json`); never the package root. Copy the
-package's `config.json.example` or run `/subagents-init`. Run `/reload` after
+`~/.omp/agent/herdr-agents/config.json`); never the package root. Copy the
+package's `config.json.example` or run `/subagents-init`. Start a new session after
 changes. Without a real file, only non-model settings fall back to the example.
 
 | Key | Purpose |
@@ -275,38 +296,39 @@ this skill's directory, not the user's working directory. It is the canonical
 reference for requirements, installation, Focus/All, limits, and uninstall.
 
 The extension always marks delegated children inside Herdr; there is no
-setting. Installing the Pi package does not install the Herdr plugin, and the
+setting. Installing the omp plugin does not install the Herdr plugin, and the
 plugin alone hides nothing.
 
-1. Check the installed extension is newer than `3.3.1` (older releases mark
-   children only with `"sidebar": { "enabled": true }` in `config.json`), and
-   check the guide's Herdr compatibility requirements. Markers work on Linux and macOS
-   and need Herdr's Pi integration (`herdr integration install pi`) in the
+1. Check the installed extension is an `omp-herdr-agents` release (the upstream
+   `pi-herdr-agents` releases `3.2.0` through `3.3.1` marked children only with
+   `"sidebar": { "enabled": true }` in `config.json`), and check the guide's
+   Herdr compatibility requirements. Markers work on Linux and macOS
+   and need Herdr's omp integration (`herdr integration install omp`) in the
    agent directory children use; the Herdr server needs `node` on its
-   `PATH`. Use `pi list` to check package sources; do not load two copies of
+   `PATH`. Use `omp plugin list` to check plugin sources; do not load two copies of
    the extension.
 2. Review the plugin source, then follow the guide to install
-   `giuseppecrj/pi-herdr-agents/plugins/sidebar` with `herdr plugin install`,
+   `magic3007/omp-herdr-agents/plugins/sidebar` with `herdr plugin install`,
    or link an existing compatible directory with `herdr plugin link`.
-   Installing the Pi package does not install the Herdr plugin.
-3. After installing or upgrading the extension, run `/reload` in each parent
-   Pi session inside Herdr, then launch new children. Running children
+   Installing the omp plugin does not install the Herdr plugin.
+3. After installing or upgrading the extension, restart each parent
+   omp session inside Herdr, then launch new children. Running children
    that were never marked are not marked retroactively.
 4. Focus turns on by default: the plugin applies it at the first agent Herdr
    detects after install and after a server restart. To change it, invoke an
    action; the last choice sticks, and All stops the automatic Focus:
 
    ```bash
-   herdr plugin action invoke pi-herdr-agents.sidebar.focus
+   herdr plugin action invoke omp-herdr-agents.sidebar.focus
    ```
 
 Focus changes the server-wide Agents view, replacing any existing view,
 including another tool's whenever an agent is detected unless All was chosen. It
 hides marked children except those blocked or with unknown status; it never
 stops children or suppresses notifications. To restore rows, invoke
-`herdr plugin action invoke pi-herdr-agents.sidebar.all`. All clears only this
+`herdr plugin action invoke omp-herdr-agents.sidebar.all`. All clears only this
 plugin's view and leaves another tool's view untouched. If filtering does not
-work, inspect `herdr plugin log list --plugin pi-herdr-agents.sidebar` and
+work, inspect `herdr plugin log list --plugin omp-herdr-agents.sidebar` and
 follow the guide's troubleshooting steps.
 
 ## Denied tools

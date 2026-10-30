@@ -373,7 +373,7 @@ describe("PiHarnessAdapter", () => {
 	it("launches the relocated protocol and maps the session handle", async () =>
 		usingFixture(async (f) => {
 			const h = await f.adapter.spawn(f.options);
-			assert.equal(h.harness, "pi");
+			assert.equal(h.harness, "omp");
 			assert.match(h.sessionId, /\.jsonl$/);
 			assert.equal(h.cwd, f.root);
 			assert.equal(h.role, "worker");
@@ -443,7 +443,7 @@ describe("PiHarnessAdapter", () => {
 			assert.notEqual(next.sessionId, first.sessionId);
 			assert.equal(f.adapter.exitCode(next), undefined);
 			assert.notEqual(await f.adapter.getState(next), "done");
-			await assert.rejects(f.adapter.interrupt(first), /Unknown Pi child/);
+			await assert.rejects(f.adapter.interrupt(first), /Unknown omp child/);
 			writeFileSync(`${next.sessionId}.exit`, JSON.stringify({ type: "done" }));
 			assert.equal(
 				(await f.adapter.awaitCompletion(next, new AbortController().signal))
@@ -931,7 +931,7 @@ describe("PiHarnessAdapter retained worktree kill", () => {
 			const w = await worktreeChild(f, { probe, identity: identity() });
 			await assert.rejects(
 				w.adapter.kill(w.h),
-				/Owned Pi process exit unconfirmed in retained worktree pane .*process 20 \(start time 5000\) is still alive 150ms after SIGTERM/,
+				/Owned omp process exit unconfirmed in retained worktree pane .*process 20 \(start time 5000\) is still alive 150ms after SIGTERM/,
 			);
 			assert.deepEqual(signals, [20], "no repeated signal and no SIGKILL");
 			assert.deepEqual(w.closes, []);

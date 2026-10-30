@@ -989,8 +989,12 @@ describe("host adapter migration", () => {
 						await close(id);
 					});
 					try {
-						if (boundary === "adapter") mkdirSync(child.sessionFile);
-						else
+						// A launch seeds the child session now, so the adapter-failure
+						// boundary must displace that file before planting a directory.
+						if (boundary === "adapter") {
+							rmSync(child.sessionFile, { force: true, recursive: true });
+							mkdirSync(child.sessionFile);
+						} else
 							writeFileSync(
 								child.sessionFile,
 								JSON.stringify({
@@ -1726,7 +1730,7 @@ describe("host adapter migration", () => {
 	it("/worktree refuses to hand off an out-of-scope parent model before creating resources", async () =>
 		withAdapterHost(async (f) => {
 			const worktree = f.mock.registeredCommands.find(
-				(command: any) => command.name === "worktree",
+				(command: any) => command.name === "subagent-worktree",
 			);
 			const notifications: string[] = [];
 			const ctx = {
@@ -1865,7 +1869,7 @@ describe("host adapter migration", () => {
 			assert.equal(f.commands.length, 1);
 			assert.ok(
 				f.commands[0].includes(
-					`--session '${path}' --model 'fake/worker' --models 'fake/parent,fake/worker' `,
+					`-r '${path}' --model 'fake/worker' --models 'fake/parent,fake/worker' `,
 				),
 				f.commands[0],
 			);
@@ -1966,7 +1970,7 @@ describe("host adapter migration", () => {
 					await assert.rejects(
 						f.launch({ name: "missing", task: "bounded", agent, worktree }),
 						new RegExp(
-							`Agent "${agent}" was not found\\. pi-herdr-agents ships no roles`,
+							`Agent "${agent}" was not found\\. omp-herdr-agents ships no roles`,
 						),
 					);
 			assert.equal(worktrees, 0);
@@ -2125,7 +2129,7 @@ describe("host adapter migration", () => {
 							exitCode: 1,
 							elapsed: f.mock.sentMessages[0].message.details.elapsed,
 							sessionFile: path,
-							resultContent: `Sub-agent "resumed" failed (exit code 1).\n\n${recover === "empty" ? "Resumed session exited with code 1" : childReport("resumed", "failure", "Recovered new output")}\n\nSession: ${path}\nResume: pi --session ${path}`,
+							resultContent: `Sub-agent "resumed" failed (exit code 1).\n\n${recover === "empty" ? "Resumed session exited with code 1" : childReport("resumed", "failure", "Recovered new output")}\n\nSession: ${path}\nResume: omp -r ${path}`,
 						});
 					} else assert.match(String(readError), /EISDIR/);
 				}));
@@ -2291,7 +2295,7 @@ describe("host adapter migration", () => {
 							);
 							assert.ok(
 								message.content.endsWith(
-									`\n\nSession: ${path}\nResume: pi --session ${path}`,
+									`\n\nSession: ${path}\nResume: omp -r ${path}`,
 								),
 							);
 						} else {
@@ -3469,7 +3473,7 @@ describe("session.ts", () => {
 	});
 
 	describe("createWorktreeSessionFork", () => {
-		it("preserves the active branch, target cwd, and parent immutability", () => {
+		it("preserves the active branch, target cwd, and parent immutability", async () => {
 			const timestamp = "2026-07-31T00:00:00.000Z";
 			const parentFile = createSessionFile(dir, [
 				{
@@ -3538,7 +3542,7 @@ describe("session.ts", () => {
 			const parentBefore = readFileSync(parentFile, "utf8");
 			const childFile = join(dir, "handoff-child.jsonl");
 
-			createWorktreeSessionFork({
+			await createWorktreeSessionFork({
 				parentSessionFile: parentFile,
 				leafId: "active-assistant",
 				childSessionFile: childFile,
@@ -3564,7 +3568,7 @@ describe("session.ts", () => {
 			assert.equal(leafEntry.content, "Continue in the worktree.");
 		});
 
-		it("preserves compaction entries on the active branch", () => {
+		it("preserves compaction entries on the active branch", async () => {
 			const timestamp = "2026-07-31T00:00:00.000Z";
 			const parentFile = createSessionFile(dir, [
 				{
@@ -3608,7 +3612,7 @@ describe("session.ts", () => {
 			]);
 			const childFile = join(dir, "compaction-child.jsonl");
 
-			createWorktreeSessionFork({
+			await createWorktreeSessionFork({
 				parentSessionFile: parentFile,
 				leafId: "compaction-entry",
 				childSessionFile: childFile,
@@ -7963,10 +7967,10 @@ describe("subagent-done.ts", () => {
 					};
 					emit("before_agent_start", { prompt: "task" });
 					emit("agent_start", {});
-					emit("agent_end", { messages: stopped });
+					// Settlement arrives as a single terminal `agent_end`.
 					emit(
-						"agent_settled",
-						{ aborted: false },
+						"agent_end",
+						{ messages: stopped },
 						{
 							...idleCtx,
 							sessionManager: { getBranch: () => [] },
@@ -8027,13 +8031,12 @@ describe("subagent-done.ts", () => {
 				const { api, eventHandlers } = createMockExtensionApi();
 				subagentDoneExtension(api);
 				const agentEnd = eventHandlers.get("agent_end")?.[0];
-				const agentSettled = eventHandlers.get("agent_settled")?.[0];
 				assert.ok(agentEnd);
-				assert.ok(agentSettled);
 
 				let shutdowns = 0;
 				let branch: any[] = [];
 				const ctx = {
+					hasPendingMessages: () => false,
 					shutdown: () => shutdowns++,
 					sessionManager: { getBranch: () => branch },
 				};
@@ -8042,7 +8045,7 @@ describe("subagent-done.ts", () => {
 					stopReason: "error",
 					errorMessage: "This operation was aborted",
 				};
-				agentEnd({ messages: [transientError] }, ctx);
+				agentEnd({ messages: [transientError], willContinue: true }, ctx);
 				assert.equal(existsSync(`${sessionFile}.exit`), false);
 				assert.equal(shutdowns, 0);
 
@@ -8056,11 +8059,12 @@ describe("subagent-done.ts", () => {
 					{ type: "compaction", summary: "Compacted" },
 					{ type: "message", message: completed },
 				];
-				agentEnd({ messages: [completed] }, ctx);
+				// The continuation that follows compaction is still not terminal.
+				agentEnd({ messages: [completed], willContinue: true }, ctx);
 				assert.equal(existsSync(`${sessionFile}.exit`), false);
 				assert.equal(shutdowns, 0);
 
-				agentSettled({}, ctx);
+				agentEnd({ messages: [completed] }, ctx);
 				assert.deepEqual(
 					JSON.parse(readFileSync(`${sessionFile}.exit`, "utf8")),
 					{
@@ -8068,7 +8072,7 @@ describe("subagent-done.ts", () => {
 					},
 				);
 				assert.equal(shutdowns, 1);
-				agentSettled({}, ctx);
+				agentEnd({ messages: [completed] }, ctx);
 				assert.equal(shutdowns, 1);
 			} finally {
 				restoreEnvVar("PI_SUBAGENT_AUTO_EXIT", previousAutoExit);
@@ -8094,6 +8098,7 @@ describe("subagent-done.ts", () => {
 				};
 				let shutdowns = 0;
 				const ctx = {
+					hasPendingMessages: () => false,
 					shutdown: () => shutdowns++,
 					sessionManager: {
 						getBranch: () => [
@@ -8107,7 +8112,6 @@ describe("subagent-done.ts", () => {
 				};
 
 				eventHandlers.get("agent_end")?.[0]({ messages: [cachedError] }, ctx);
-				eventHandlers.get("agent_settled")?.[0]({}, ctx);
 				assert.deepEqual(
 					JSON.parse(readFileSync(`${sessionFile}.exit`, "utf8")),
 					{ type: "done" },
@@ -8137,6 +8141,7 @@ describe("subagent-done.ts", () => {
 				};
 				let shutdowns = 0;
 				const ctx = {
+					hasPendingMessages: () => false,
 					shutdown: () => shutdowns++,
 					sessionManager: {
 						getBranch: () => {
@@ -8146,8 +8151,6 @@ describe("subagent-done.ts", () => {
 				};
 
 				eventHandlers.get("agent_end")?.[0]({ messages: [error] }, ctx);
-				assert.equal(existsSync(`${sessionFile}.exit`), false);
-				eventHandlers.get("agent_settled")?.[0]({}, ctx);
 				assert.deepEqual(
 					JSON.parse(readFileSync(`${sessionFile}.exit`, "utf8")),
 					{
@@ -8177,6 +8180,7 @@ describe("subagent-done.ts", () => {
 				const aborted = { role: "assistant", stopReason: "aborted" };
 				let shutdowns = 0;
 				const ctx = {
+					hasPendingMessages: () => false,
 					shutdown: () => shutdowns++,
 					sessionManager: {
 						getBranch: () => [{ type: "message", message: aborted }],
@@ -8184,7 +8188,6 @@ describe("subagent-done.ts", () => {
 				};
 
 				eventHandlers.get("agent_end")?.[0]({ messages: [aborted] }, ctx);
-				eventHandlers.get("agent_settled")?.[0]({}, ctx);
 				assert.equal(existsSync(`${sessionFile}.exit`), false);
 				assert.equal(shutdowns, 0);
 			} finally {
@@ -8228,6 +8231,7 @@ describe("subagent-done.ts", () => {
 					subagentDoneExtension(api);
 					let shutdowns = 0;
 					const ctx = {
+						hasPendingMessages: () => false,
 						shutdown: () => shutdowns++,
 						sessionManager: {
 							getBranch: () =>
@@ -8237,7 +8241,6 @@ describe("subagent-done.ts", () => {
 					run(
 						() => {
 							eventHandlers.get("agent_end")?.[0]({ messages }, ctx);
-							eventHandlers.get("agent_settled")?.[0]({}, ctx);
 						},
 						() => shutdowns,
 						`${sessionFile}.exit`,
@@ -8365,6 +8368,7 @@ describe("subagent-done.ts", () => {
 			subagentDoneExtension(api);
 			let shutdowns = 0;
 			const ctx = {
+				hasPendingMessages: () => false,
 				shutdown: () => shutdowns++,
 				sessionManager: {
 					getBranch: () => [
@@ -8391,7 +8395,6 @@ describe("subagent-done.ts", () => {
 				{ messages: [{ role: "assistant", stopReason: "stop" }] },
 				ctx,
 			);
-			eventHandlers.get("agent_settled")?.[0]({}, ctx);
 			assert.deepEqual(
 				JSON.parse(readFileSync(`${sessionFile}.exit`, "utf8")),
 				{
@@ -8421,6 +8424,7 @@ describe("subagent-done.ts", () => {
 			subagentDoneExtension(api);
 			let shutdowns = 0;
 			const ctx = {
+				hasPendingMessages: () => false,
 				shutdown: () => shutdowns++,
 				sessionManager: {
 					getBranch: () => [
@@ -8436,7 +8440,6 @@ describe("subagent-done.ts", () => {
 				{ messages: [{ role: "assistant", stopReason: "stop" }] },
 				ctx,
 			);
-			eventHandlers.get("agent_settled")?.[0]({}, ctx);
 			assert.equal(existsSync(`${sessionFile}.exit`), false);
 			assert.equal(shutdowns, 0);
 
@@ -8445,7 +8448,6 @@ describe("subagent-done.ts", () => {
 			);
 			assert.ok(subagentDone);
 			await subagentDone.execute("call", {}, null, null, ctx);
-			eventHandlers.get("agent_settled")?.[0]({}, ctx);
 			assert.deepEqual(
 				JSON.parse(readFileSync(`${sessionFile}.exit`, "utf8")),
 				{
@@ -9561,7 +9563,7 @@ describe("commands", () => {
 		subagentsModule.default(api);
 
 		const worktree = registeredCommands.find(
-			(command) => command.name === "worktree",
+			(command) => command.name === "subagent-worktree",
 		);
 		assert.ok(worktree, "expected /worktree to be registered");
 		assert.equal(
@@ -9928,7 +9930,7 @@ describe("commands", () => {
 		assert.deepEqual(sentUserMessages, []);
 		assert.equal(requests, 0);
 		assert.deepEqual(notifications, [
-			"Task-model init not started: no model is selected, so Pi cannot run the init prompt. Select a model, then retry. Nothing was written.",
+			"Task-model init not started: no model is selected, so the host cannot run the init prompt. Select a model, then retry. Nothing was written.",
 		]);
 	});
 
@@ -10516,8 +10518,8 @@ describe("commands", () => {
 		const previousId = process.env.PI_SUBAGENT_ID;
 		try {
 			for (const [childId, expected] of [
-				[undefined, ["subagent", "subagents-init", "worktree"]],
-				["command-inventory-child", ["subagent", "worktree"]],
+				[undefined, ["subagent", "subagent-worktree", "subagents-init"]],
+				["command-inventory-child", ["subagent", "subagent-worktree"]],
 			] as const) {
 				restoreEnvVar("PI_SUBAGENT_ID", childId);
 				const { api, registeredCommands, sentUserMessages } =
@@ -10657,7 +10659,7 @@ describe("worktree cleanup public surface", () => {
 		assert.equal(scan.mock.callCount(), 0);
 		assert.deepEqual(f.calls, []);
 		const command = registeredCommands.find(
-			(item) => item.name === "worktree",
+			(item) => item.name === "subagent-worktree",
 		)!;
 		await command.handler("remove task", ctx);
 		assert.match(notices.at(-1)!, /Removed/);
@@ -10683,7 +10685,7 @@ describe("worktree cleanup public surface", () => {
 					);
 			else
 				await registeredCommands
-					.find((item) => item.name === "worktree")!
+					.find((item) => item.name === "subagent-worktree")!
 					.handler("remove task --preserve", ctx);
 			assert.equal(f.calls[0], "preserve");
 		}
@@ -10807,7 +10809,7 @@ describe("worktree cleanup public surface", () => {
 			assert.deepEqual(notices, []);
 			assert.deepEqual(effects, []);
 			const command = registeredCommands.find(
-				(command) => command.name === "worktree",
+				(command) => command.name === "subagent-worktree",
 			)!;
 			await command.handler("list", ctx);
 			assert.equal(
@@ -10868,7 +10870,7 @@ describe("worktree cleanup public surface", () => {
 				false,
 			);
 			const command = registeredCommands.find(
-				(command) => command.name === "worktree",
+				(command) => command.name === "subagent-worktree",
 			)!;
 			assert.ok(command);
 			assert.doesNotMatch(command.description, /remove/);
@@ -13419,7 +13421,7 @@ describe("subagent interruption", () => {
 
 		assert.match(presentation, /failed \(exit code 130\)/);
 		assert.doesNotMatch(presentation, /interrupted/);
-		assert.match(presentation, /Resume: pi --session/);
+		assert.match(presentation, /Resume: omp -r/);
 	});
 
 	it("renders a clear provider/agent error when errorMessage is set", () => {
@@ -13449,7 +13451,7 @@ describe("subagent interruption", () => {
 			/Error: Anthropic 529 Overloaded after 3 retries/,
 		);
 		assert.match(presentation, /subagent_resume/);
-		assert.match(presentation, /Resume: pi --session/);
+		assert.match(presentation, /Resume: omp -r/);
 		assert.doesNotMatch(presentation, /ignored when errorMessage is present/);
 	});
 
@@ -13610,7 +13612,7 @@ describe("subagent interruption", () => {
 			'Sub-agent "Reviewer" completed (5s).\n\n' +
 				childReport("Reviewer", "result", "Useful result") +
 				"\n\n" +
-				"Session: /tmp/subagent.jsonl\nResume: pi --session /tmp/subagent.jsonl",
+				"Session: /tmp/subagent.jsonl\nResume: omp -r /tmp/subagent.jsonl",
 		);
 	});
 
@@ -13853,7 +13855,7 @@ describe("subagent interruption", () => {
 		assert.match(presentation, /-TAIL/);
 		assert.match(presentation, /result abbreviated/i);
 		assert.match(presentation, /Session: \/tmp\/subagent\.jsonl/);
-		assert.match(presentation, /Resume: pi --session \/tmp\/subagent\.jsonl/);
+		assert.match(presentation, /Resume: omp -r \/tmp\/subagent\.jsonl/);
 	});
 
 	it("keeps the report envelope closed when a long result is abbreviated", () => {
@@ -14044,7 +14046,7 @@ describe("subagent interruption", () => {
 		assert.match(presentation, /ERROR-TAIL/);
 		assert.match(presentation, /result abbreviated/i);
 		assert.match(presentation, /subagent_resume/);
-		assert.match(presentation, /Resume: pi --session \/tmp\/subagent\.jsonl/);
+		assert.match(presentation, /Resume: omp -r \/tmp\/subagent\.jsonl/);
 	});
 
 	it("keeps presentations bounded even when a session reference exceeds filesystem limits", () => {
@@ -14101,7 +14103,7 @@ describe("subagent interruption", () => {
 			'Sub-agent "Reviewer" completed (5s).\n\n' +
 				childReport("Reviewer", "result", "Useful result") +
 				"\n\n" +
-				"Session: /tmp/subagent.jsonl\nResume: pi --session /tmp/subagent.jsonl\n\n" +
+				"Session: /tmp/subagent.jsonl\nResume: omp -r /tmp/subagent.jsonl\n\n" +
 				"Runtime warning: requested model unavailable",
 		);
 	});
@@ -14122,7 +14124,7 @@ describe("subagent interruption", () => {
 			};
 			testApi.sendSubagentResult(
 				api,
-				`HEAD-${"x".repeat(18_000)}-TAIL\n\nSession: ${sessionFile}\nResume: pi --session ${sessionFile}`,
+				`HEAD-${"x".repeat(18_000)}-TAIL\n\nSession: ${sessionFile}\nResume: omp -r ${sessionFile}`,
 				details,
 			);
 
@@ -14191,7 +14193,7 @@ describe("subagent status renderer", () => {
 					customType: "subagent_result",
 					content:
 						'Sub-agent "Reviewer" error: failed\n\nSession: /tmp/subagent.jsonl\n' +
-						"Resume: pi --session /tmp/subagent.jsonl",
+						"Resume: omp -r /tmp/subagent.jsonl",
 					details: {
 						name: "Reviewer",
 						error: "failed",
@@ -14205,7 +14207,7 @@ describe("subagent status renderer", () => {
 			.join("\n");
 
 		assert.match(rendered, /Session: \/tmp\/subagent\.jsonl/);
-		assert.match(rendered, /Resume:\s+pi --session \/tmp\/subagent\.jsonl/);
+		assert.match(rendered, /Resume:\s+omp -r \/tmp\/subagent\.jsonl/);
 	});
 
 	for (const kind of ["result", "task-result"] as const)

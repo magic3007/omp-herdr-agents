@@ -365,7 +365,7 @@ describe("Pi launch", () => {
 		) => infer Result
 			? Awaited<Result>
 			: never,
-		reason = /expected Pi process not observed/,
+		reason = /expected harness process not observed/,
 	) {
 		const provider = new FakeSurfaceProvider();
 		provider.createSurface({ name: "ready", cwd: "/repo" });
@@ -387,7 +387,7 @@ describe("Pi launch", () => {
 					"/repo",
 				),
 				new RegExp(
-					`Timed out waiting for Pi session /tmp/child\\.jsonl in Herdr pane fake-surface-1: ${reason.source}`,
+					`Timed out waiting for the omp session /tmp/child\\.jsonl in Herdr pane fake-surface-1: ${reason.source}`,
 				),
 			);
 		} finally {
@@ -423,11 +423,12 @@ describe("Pi launch", () => {
 	const linuxOnly = { skip: process.platform !== "linux" };
 
 	it("Pi readiness matches the launched session by environment, not rewritten argv", () => {
-		// Herdr 0.9.3 pane process-info for a live Pi: its title rewrite leaves no `--session`.
+		// Herdr 0.9.3 pane process-info for a live child: its title rewrite
+		// leaves no `--session`.
 		const herdrReported = {
 			pid: 42,
-			name: "pi",
-			argv: ["pi"],
+			name: "omp",
+			argv: ["omp"],
 			cwd: "/repo",
 		};
 		const environments = new Map([
@@ -440,6 +441,19 @@ describe("Pi launch", () => {
 			isExpectedPiProcess(herdrReported, "/tmp/child.jsonl", "/repo", read),
 			true,
 		);
+		// The harness renames itself, but a runtime host may keep the
+		// interpreter name; the session environment stays the durable signal.
+		for (const name of ["pi", "omp", "bun", "node"])
+			assert.equal(
+				isExpectedPiProcess(
+					{ ...herdrReported, name },
+					"/tmp/child.jsonl",
+					"/repo",
+					read,
+				),
+				true,
+				name,
+			);
 		for (const process of [
 			{ ...herdrReported, pid: 43 },
 			{ ...herdrReported, pid: 44 },
@@ -447,10 +461,11 @@ describe("Pi launch", () => {
 			{
 				...herdrReported,
 				pid: 43,
-				argv: ["pi", "--session", "/tmp/child.jsonl"],
+				argv: ["omp", "-r", "/tmp/child.jsonl"],
 			},
 			{ ...herdrReported, cwd: "/wrong" },
-			{ ...herdrReported, name: "node" },
+			{ ...herdrReported, name: "python3" },
+			{ ...herdrReported, name: undefined, argv0: "/usr/local/bin/python3" },
 		]) {
 			assert.equal(
 				isExpectedPiProcess(process, "/tmp/child.jsonl", "/repo", read),
@@ -1142,9 +1157,23 @@ describe("Pi launch", () => {
 				},
 			);
 
+			// The child is started with `-r <sessionFile>`, so the file must exist
+			// before launch; what `fork: false` forbids is inheriting the parent's
+			// conversation into it.
 			assert.equal(
 				existsSync(running.sessionFile),
-				false,
+				true,
+				"the child session is seeded so omp can adopt it with -r",
+			);
+			// SAFETY: the seeded file is written by seedSubagentSessionFile, so every
+			// line is one of its own JSON entries with a `type` field.
+			const seeded = readFileSync(running.sessionFile, "utf8")
+				.split("\n")
+				.filter((line) => line.trim())
+				.map((line) => JSON.parse(line) as { type?: string });
+			assert.deepEqual(
+				seeded.map((entry) => entry.type),
+				["session"],
 				"fork: false must not seed parent conversation into child session",
 			);
 			const taskPath = command.match(/'@([^']+\.md)'/)?.[1];
@@ -1452,7 +1481,7 @@ describe("Pi launch", () => {
 				);
 				assert.ok(
 					command.includes(
-						`pi --session ${expectedShellQuote(sessionFile)} --tools 'read,bash,caller_ping' -e `,
+						`omp -r ${expectedShellQuote(sessionFile)} --tools 'read,bash,caller_ping' --hook `,
 					),
 				);
 				assert.match(command, /PI_SUBAGENT_NAME='Resume worker'/);
@@ -1488,7 +1517,7 @@ describe("Pi launch", () => {
 		});
 	});
 
-	it("resumes under the absolute session path Pi will report, whatever form the caller passed", async () => {
+	it("resumes under the absolute session path the harness will report, whatever form the caller passed", async () => {
 		await withFixture(async ({ root, project, sessionDir }) => {
 			const sessionFile = join(root, "child.jsonl");
 			writeFileSync(
@@ -1496,8 +1525,9 @@ describe("Pi launch", () => {
 				JSON.stringify({ type: "session", id: "child", cwd: project }) + "\n",
 			);
 			writePublicResumePolicy(sessionFile);
-			// Pi resolves `--session` against the pane's cwd (the session's project),
-			// so the launch must pass and keep the path the caller's cwd meant.
+			// The harness resolves `-r` against the pane's cwd (the session's
+			// project), so the launch must pass and keep the path the caller's cwd
+			// meant.
 			for (const given of [
 				`${root}/./nested/../child.jsonl`,
 				relative(process.cwd(), sessionFile),
@@ -1525,7 +1555,7 @@ describe("Pi launch", () => {
 				);
 				assert.equal(running.sessionFile, sessionFile, given);
 				assert.ok(
-					command.includes(`pi --session ${expectedShellQuote(sessionFile)} `),
+					command.includes(`omp -r ${expectedShellQuote(sessionFile)} `),
 					given,
 				);
 				assert.ok(

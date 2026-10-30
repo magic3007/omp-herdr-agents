@@ -5,7 +5,11 @@ import {
 	isFiniteNumber,
 	isString,
 } from "../../maestro/core/config/type-guards.ts";
-import { formatElapsed, unwrapChildReport } from "./presentation.ts";
+import {
+	formatElapsed,
+	RESUME_COMMAND,
+	unwrapChildReport,
+} from "./presentation.ts";
 
 export function registerMessageRenderers(pi: ExtensionAPI): void {
 	// ── subagent_result message renderer ──
@@ -89,7 +93,10 @@ export function registerMessageRenderers(pi: ExtensionAPI): void {
 							theme.fg("dim", `Session: ${details.sessionFile}`),
 						);
 						contentLines.push(
-							theme.fg("dim", `Resume:  pi --session ${details.sessionFile}`),
+							theme.fg(
+								"dim",
+								`Resume:  ${RESUME_COMMAND} ${details.sessionFile}`,
+							),
 						);
 					}
 				} else {

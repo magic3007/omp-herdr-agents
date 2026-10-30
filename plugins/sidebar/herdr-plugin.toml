@@ -1,22 +1,22 @@
-id = "pi-herdr-agents.sidebar"
-name = "Pi Herdr Agents Sidebar"
+id = "omp-herdr-agents.sidebar"
+name = "omp Herdr Agents Sidebar"
 version = "0.2.0"
 # 0.9.0 is the first release with agent.view.set and agent.view.clear, the
 # only Herdr methods the actions call. Tested on 0.9.1 and
 # 0.9.2-preview.2026-09-29-8e78f929d8f0; other builds are untested. See README.md.
 min_herdr_version = "0.9.0"
-description = "Hide delegated Pi children from the Agents view (Focus) or show every agent (All)"
+description = "Hide delegated subagents from the Agents view (Focus) or show every agent (All)"
 platforms = ["linux", "macos"]
 
 [[actions]]
 id = "focus"
-title = "Pi agents: Focus (hide delegated children)"
+title = "Subagents: Focus (hide delegated children)"
 contexts = ["global"]
 command = ["node", "sidebar.mjs", "focus"]
 
 [[actions]]
 id = "all"
-title = "Pi agents: All (show every agent)"
+title = "Subagents: All (show every agent)"
 contexts = ["global"]
 command = ["node", "sidebar.mjs", "all"]
 

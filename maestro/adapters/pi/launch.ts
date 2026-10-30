@@ -1,7 +1,11 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import {
+	CONFIG_DIR_NAME,
+	getAgentDir,
+	SessionManager,
+} from "@earendil-works/pi-coding-agent";
 import { getSubagentActivityFile } from "./activity-file.ts";
 import {
 	formatMissingSkillsNote,
@@ -20,7 +24,11 @@ import {
 	type ResolvedRuntimePlan,
 } from "../../core/routing.ts";
 import type { PaneConfig } from "../../core/config/pane-config.ts";
-import { isNonEmptyString } from "../../core/config/type-guards.ts";
+import {
+	isNonEmptyString,
+	isFunction,
+	isString,
+} from "../../core/config/type-guards.ts";
 import {
 	childDelegationDepth,
 	DELEGATION_DEPTH_ENV,
@@ -38,6 +46,7 @@ import type {
 } from "../../core/worktree.ts";
 import {
 	getSubagentProcessIdentityFile,
+	isHarnessProcessName,
 	linuxProcessProbe,
 	readLinuxProcessEnvironment,
 	readProcessIdentityRecord,
@@ -56,6 +65,12 @@ import {
 } from "./session.ts";
 
 const SUBAGENTS_DIR = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * The child harness CLI. This plugin drives `omp`; `pi` is the upstream
+ * spelling kept only in file and class names so the fork stays mergeable.
+ */
+export const CHILD_CLI = "omp";
 
 type SubagentSessionMode = "standalone" | "lineage-only" | "fork";
 
@@ -248,9 +263,9 @@ function worktreeSurfaceForLaunch(
 }
 
 /**
- * Names the launched session in the Pi process's exec-time environment. Pi
- * rewrites its command line, so `--session` is never readiness evidence.
- * Nothing inside Pi reads it.
+ * Names the launched session in the child process's exec-time environment. The
+ * harness rewrites its command line, so `-r <sessionFile>` is never readiness
+ * evidence. Nothing inside the harness reads it.
  */
 export const PI_LAUNCH_SESSION_ENV = "PI_HERDR_AGENTS_SESSION";
 
@@ -266,7 +281,7 @@ export function isExpectedPiProcess(
 	readEnvironment: ProcessEnvironmentReader = readLinuxProcessEnvironment,
 ): boolean {
 	return (
-		(process.name === "pi" || process.argv0?.split("/").pop() === "pi") &&
+		isHarnessProcessName(process) &&
 		process.cwd === cwd &&
 		readEnvironment(process.pid)?.get(PI_LAUNCH_SESSION_ENV) === sessionFile
 	);
@@ -282,7 +297,7 @@ async function waitForSurfacePiReady(
 	const timeoutMs = options.timeoutMs ?? 10_000;
 	const intervalMs = options.intervalMs ?? 50;
 	const deadline = Date.now() + timeoutMs;
-	let lastError = "expected Pi process not observed";
+	let lastError = "expected harness process not observed";
 
 	while (Date.now() <= deadline) {
 		try {
@@ -303,14 +318,14 @@ async function waitForSurfacePiReady(
 		await new Promise((resolve) => setTimeout(resolve, intervalMs));
 	}
 	throw new Error(
-		`Timed out waiting for Pi session ${sessionFile} in Herdr pane ${surface}: ${lastError}`,
+		`Timed out waiting for the ${CHILD_CLI} session ${sessionFile} in Herdr pane ${surface}: ${lastError}`,
 	);
 }
 
 /**
  * Wait for the child to publish its own identity, then accept it only while
  * that process is alive in this host's namespace as the Herdr pane shell or a
- * descendant of it. Command-line text is never consulted: Pi rewrites it.
+ * descendant of it. Command-line text is never consulted: the harness rewrites it.
  */
 export async function captureSurfacePiProcessIdentity(
 	provider: Pick<SurfaceProvider, "getProcessInfo">,
@@ -478,7 +493,7 @@ interface SkillDelivery {
 }
 
 /**
- * Launch one validated Pi-backed request. Lifecycle watching and parent
+ * Launch one validated harness-backed request. Lifecycle watching and parent
  * delivery begin only after this transaction returns the running child.
  */
 export async function launchPiSubagent(
@@ -536,12 +551,12 @@ async function launchFreshPiSubagent(
 		const skills = await resolveSkillDelivery(resolved, surface, operations);
 		const session = prepareChildSession(resolved, surface, operations);
 		const handoffArtifacts = request.handoff
-			? prepareTaskArtifacts(resolved, session, operations, skills)
+			? await prepareTaskArtifacts(resolved, session, operations, skills)
 			: undefined;
 		await confirmShellReady(session, operations);
 		const artifacts =
 			handoffArtifacts ??
-			prepareTaskArtifacts(resolved, session, operations, skills);
+			(await prepareTaskArtifacts(resolved, session, operations, skills));
 		const command = buildPiCommand(resolved, artifacts);
 		const launchScriptFile = await startPiProcess(
 			resolved,
@@ -551,7 +566,7 @@ async function launchFreshPiSubagent(
 		);
 		if (request.handoff) {
 			if (!operations.waitForPiReady) {
-				throw new Error("Pi startup confirmation is unavailable");
+				throw new Error(`${CHILD_CLI} startup confirmation is unavailable`);
 			}
 			await operations.waitForPiReady(
 				artifacts.surface,
@@ -600,9 +615,7 @@ async function launchFreshPiSubagent(
 function resolveLaunchRequest(request: FreshPiLaunchRequest): ResolvedLaunch {
 	const id = request.id ?? Math.random().toString(16).slice(2, 10);
 	const agentDir =
-		request.parent.agentDir ??
-		process.env.PI_CODING_AGENT_DIR ??
-		join(homedir(), ".pi", "agent");
+		request.parent.agentDir ?? process.env.PI_CODING_AGENT_DIR ?? getAgentDir();
 	const rawCwd = request.cwd ?? request.behavior.cwd;
 	const cwdBase =
 		request.cwd == null && request.behavior.cwd != null
@@ -613,7 +626,9 @@ function resolveLaunchRequest(request: FreshPiLaunchRequest): ResolvedLaunch {
 			? rawCwd
 			: join(cwdBase, rawCwd)
 		: request.parent.cwd;
-	const localAgentDir = rawCwd ? join(sourceCwd, ".pi", "agent") : null;
+	const localAgentDir = rawCwd
+		? join(sourceCwd, CONFIG_DIR_NAME, "agent")
+		: null;
 	let sessionMode: SubagentSessionMode = request.behavior.sessionMode;
 	if (request.fork === true) sessionMode = "fork";
 	else if (request.fork === false) sessionMode = "standalone";
@@ -714,7 +729,7 @@ async function prepareLaunchSurface(
 		...ownership,
 		...worktree,
 	});
-	const isolatedAgentDir = join(created.path, ".pi", "agent");
+	const isolatedAgentDir = join(created.path, CONFIG_DIR_NAME, "agent");
 	const hasIsolatedAgentDir = existsSync(isolatedAgentDir);
 	return {
 		surface: created.paneId,
@@ -836,12 +851,12 @@ async function resolveSkillDelivery(
 	return { prefix, diagnostics: resolution.diagnostics };
 }
 
-function prepareTaskArtifacts(
+async function prepareTaskArtifacts(
 	resolved: ResolvedLaunch,
 	session: PreparedSession,
 	operations: PiLaunchOperations,
 	skills: SkillDelivery,
-): PreparedArtifacts {
+): Promise<PreparedArtifacts> {
 	const { request } = resolved;
 	if (request.handoff) {
 		if (!session.worktree) {
@@ -852,7 +867,7 @@ function prepareTaskArtifacts(
 			session.worktree,
 			session.sessionFile,
 		);
-		createWorktreeSessionFork({
+		await createWorktreeSessionFork({
 			parentSessionFile: request.parent.sessionFile,
 			leafId: request.handoff.leafId,
 			childSessionFile: session.sessionFile,
@@ -868,9 +883,13 @@ function prepareTaskArtifacts(
 				handoffMessage,
 			},
 		);
-	} else if (resolved.sessionMode !== "standalone") {
+	} else if (!existsSync(session.sessionFile)) {
+		// The child is started with `-r <sessionFile>`, which omp only adopts
+		// when the file already exists and holds at least one entry. Seeding is
+		// therefore unconditional: a standalone child gets the header alone, and
+		// a lineage or fork child gets the parent lines first.
 		seedSubagentSessionFile({
-			mode: resolved.sessionMode,
+			mode: resolved.sessionMode === "fork" ? "fork" : "lineage-only",
 			parentSessionFile: request.parent.sessionFile,
 			childSessionFile: session.sessionFile,
 			childCwd: session.targetCwd,
@@ -937,12 +956,15 @@ function buildPiCommand(
 ): string {
 	const { request } = resolved;
 	const parts = [
-		"pi",
-		"--session",
+		CHILD_CLI,
+		"-r",
 		shellQuote(artifacts.sessionFile),
 		...(request.handoff
 			? []
-			: ["-e", shellQuote(join(SUBAGENTS_DIR, "child", "subagent-done.ts"))]),
+			: [
+					"--hook",
+					shellQuote(join(SUBAGENTS_DIR, "child", "subagent-done.ts")),
+				]),
 		"--model",
 		shellQuote(request.runtimePlan.model),
 		"--thinking",
@@ -1008,12 +1030,12 @@ function buildPiCommand(
 			);
 	}
 
-	const piCommand =
+	const childCommand =
 		`cd ${shellQuote(artifacts.targetCwd)} && ` +
 		`${env.join(" ")} ${parts.join(" ")}`;
 	return request.handoff
-		? piCommand
-		: `${piCommand}; echo '__SUBAGENT_DONE_'$?'__'`;
+		? childCommand
+		: `${childCommand}; echo '__SUBAGENT_DONE_'$?'__'`;
 }
 
 async function startPiProcess(
@@ -1193,13 +1215,13 @@ async function launchResumedPiSubagent(
 		);
 		const command = [
 			...env,
-			"pi",
-			"--session",
+			CHILD_CLI,
+			"-r",
 			shellQuote(request.sessionFile),
 			...(pinnedModel ? ["--model", shellQuote(pinnedModel)] : []),
 			...scopeArgs,
 			...(toolAllowlist ? ["--tools", shellQuote(toolAllowlist)] : []),
-			"-e",
+			"--hook",
 			shellQuote(join(SUBAGENTS_DIR, "child", "subagent-done.ts")),
 			...(messageFile ? [shellQuote(`@${messageFile}`)] : []),
 		].join(" ");
@@ -1262,7 +1284,38 @@ export function buildSubagentToolAllowlist(
 	return [...allow].join(",");
 }
 
+/**
+ * The session directory the host harness uses for `cwd` under `agentDir`, or
+ * undefined when the host exports no such helper.
+ *
+ * `omp` encodes the cwd its own session listing scans, so its helper is used
+ * when present. Upstream pi exposes no such helper on the package root, so
+ * the property is read defensively and the pi layout stays the fallback.
+ */
+function hostSessionDirFor(cwd: string, agentDir: string): string | undefined {
+	const descriptor = Object.getOwnPropertyDescriptor(
+		SessionManager,
+		"getDefaultSessionDir",
+	);
+	if (!descriptor || !isFunction(descriptor.value)) return undefined;
+	const sessionDir = descriptor.value.call(SessionManager, cwd, agentDir);
+	return isString(sessionDir) ? sessionDir : undefined;
+}
+
+/**
+ * The session directory a child of `cwd` uses under `agentDir`.
+ *
+ * The host harness owns this layout, so its own encoding is used when it
+ * exports one; the upstream pi layout (`--cwd--`) is the fallback. The child
+ * is handed its session file explicitly (`-r`), so a differing bucket never
+ * breaks the launch.
+ */
 function getDefaultSessionDirFor(cwd: string, agentDir: string): string {
+	const hostDir = hostSessionDirFor(cwd, agentDir);
+	if (hostDir) {
+		mkdirSync(hostDir, { recursive: true });
+		return hostDir;
+	}
 	const safePath = `--${cwd.replace(/^[/\\]/, "").replace(/[/\\:]/g, "-")}--`;
 	const sessionDir = join(agentDir, "sessions", safePath);
 	mkdirSync(sessionDir, { recursive: true });

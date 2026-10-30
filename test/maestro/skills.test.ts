@@ -12,6 +12,7 @@ import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 import {
 	formatSkillBlocks,
 	parseDeclaredSkills,
@@ -59,13 +60,6 @@ function writeSkill(dir: string, name: string, body: string): string {
 	return file;
 }
 
-function trustProject(layout: Layout) {
-	writeFileSync(
-		join(layout.agentDir, "trust.json"),
-		JSON.stringify({ [layout.project]: true }),
-	);
-}
-
 function options(layout: Layout) {
 	return {
 		cwd: layout.project,
@@ -83,11 +77,10 @@ test("parseDeclaredSkills trims, drops empties and dedupes in order", () => {
 	assert.deepEqual(parseDeclaredSkills(undefined), []);
 });
 
-test("resolves declared skills from Pi's project, user and .agents skill directories", () =>
+test("resolves declared skills from the project, user and .agents skill directories", () =>
 	withLayout(async (layout) => {
-		trustProject(layout);
 		const projectFile = writeSkill(
-			join(layout.project, ".pi", "skills"),
+			join(layout.project, CONFIG_DIR_NAME, "skills"),
 			"alpha",
 			"# Alpha\nProject alpha.",
 		);
@@ -135,23 +128,53 @@ test("resolves declared skills from Pi's project, user and .agents skill directo
 		const blocks = formatSkillBlocks(resolution.skills);
 		assert.ok(
 			blocks.startsWith(
-				`<skill name="alpha" location="${projectFile}">\nReferences are relative to ${join(layout.project, ".pi", "skills", "alpha")}.\n\n# Alpha`,
+				`<skill name="alpha" location="${projectFile}">\nReferences are relative to ${join(layout.project, CONFIG_DIR_NAME, "skills", "alpha")}.\n\n# Alpha`,
 			),
 		);
 		assert.match(blocks, /Home \.agents delta\./);
 	}));
 
+test("resolves skills through an omp-shaped config directory without the omp host", () =>
+	withLayout(async (layout) => {
+		const projectFile = writeSkill(
+			join(layout.project, ".omp", "skills"),
+			"alpha",
+			"# Alpha\nOmp project alpha.",
+		);
+		const userFile = writeSkill(
+			join(layout.agentDir, "skills"),
+			"beta",
+			"# Beta\nOmp user beta.",
+		);
+
+		const resolution = await resolveDeclaredSkills(["alpha", "beta"], {
+			...options(layout),
+			configDirName: ".omp",
+		});
+
+		assert.deepEqual(
+			resolution.skills.map((skill) => skill.filePath),
+			[projectFile, userFile],
+		);
+		const blocks = formatSkillBlocks(resolution.skills);
+		assert.ok(
+			blocks.startsWith(
+				`<skill name="alpha" location="${projectFile}">\nReferences are relative to ${join(layout.project, ".omp", "skills", "alpha")}.\n\n# Alpha\nOmp project alpha.`,
+			),
+		);
+		assert.match(blocks, /Omp user beta\./);
+	}));
+
 test("REGRESSION: resolving skills never runs project extensions or installs packages", () =>
 	withLayout(async (layout) => {
-		trustProject(layout);
 		const marker = join(layout.root, "probe-ran");
-		const extensions = join(layout.project, ".pi", "extensions");
+		const extensions = join(layout.project, CONFIG_DIR_NAME, "extensions");
 		mkdirSync(extensions, { recursive: true });
 		const probe = `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "ran");\nglobalThis.__piSkillsProbeRan = true;\nexport default function () {}\n`;
 		writeFileSync(join(extensions, "probe.js"), probe);
 		writeFileSync(join(extensions, "probe.ts"), probe);
 		writeFileSync(
-			join(layout.project, ".pi", "settings.json"),
+			join(layout.project, CONFIG_DIR_NAME, "settings.json"),
 			JSON.stringify({
 				packages: ["npm:project-pkg-not-installed", "./local-pkg"],
 				extensions: ["./extensions/probe.js"],
@@ -183,7 +206,7 @@ test("REGRESSION: resolving skills never runs project extensions or installs pac
 			"git-skill",
 			"From an installed git package.",
 		);
-		const localPkg = join(layout.project, ".pi", "local-pkg");
+		const localPkg = join(layout.project, CONFIG_DIR_NAME, "local-pkg");
 		mkdirSync(localPkg, { recursive: true });
 		writeFileSync(
 			join(localPkg, "package.json"),
@@ -231,7 +254,10 @@ test("REGRESSION: resolving skills never runs project extensions or installs pac
 		assert.deepEqual(spawned, [], "no npm, git or other child process");
 		assert.equal(existsSync(marker), false, "project extension was imported");
 		assert.equal(globalThis.__piSkillsProbeRan, undefined);
-		assert.equal(existsSync(join(layout.project, ".pi", "npm")), false);
+		assert.equal(
+			existsSync(join(layout.project, CONFIG_DIR_NAME, "npm")),
+			false,
+		);
 		assert.equal(existsSync(join(layout.project, "node_modules")), false);
 		assert.equal(
 			existsSync(
@@ -256,22 +282,47 @@ test("REGRESSION: resolving skills never runs project extensions or installs pac
 		assert.match(diagnostics, /npm:@scope\/user-pkg-missing@1\.2\.3/);
 	}));
 
-test("an untrusted project's skills are not delivered", () =>
+test("a package's omp manifest names its skill paths", () =>
 	withLayout(async (layout) => {
-		writeSkill(
-			join(layout.project, ".pi", "skills"),
-			"alpha",
-			"Untrusted project alpha.",
+		const pkg = join(layout.agentDir, "npm", "node_modules", "omp-pkg");
+		mkdirSync(join(pkg, "resources", "skills"), { recursive: true });
+		writeFileSync(
+			join(pkg, "package.json"),
+			JSON.stringify({ omp: { skills: ["./resources/skills"] } }),
 		);
-		const userFile = writeSkill(
-			join(layout.agentDir, "skills"),
-			"alpha",
-			"Trusted user alpha.",
+		writeFileSync(
+			join(layout.agentDir, "settings.json"),
+			JSON.stringify({ packages: ["npm:omp-pkg"] }),
 		);
-		writeSkill(
-			join(layout.project, ".pi", "skills"),
+		const named = writeSkill(
+			join(pkg, "resources", "skills"),
+			"named-skill",
+			"From an omp package manifest.",
+		);
+
+		const resolution = await resolveDeclaredSkills(
+			["named-skill"],
+			options(layout),
+		);
+
+		assert.deepEqual(
+			resolution.skills.map((skill) => skill.filePath),
+			[named],
+		);
+	}));
+
+test("project skills are delivered without a host trust prompt", () =>
+	withLayout(async (layout) => {
+		const projectFile = writeSkill(
+			join(layout.project, CONFIG_DIR_NAME, "skills"),
+			"alpha",
+			"Project alpha.",
+		);
+		writeSkill(join(layout.agentDir, "skills"), "alpha", "User alpha.");
+		const projectOnly = writeSkill(
+			join(layout.project, CONFIG_DIR_NAME, "skills"),
 			"project-only",
-			"Untrusted.",
+			"Project only.",
 		);
 
 		const resolution = await resolveDeclaredSkills(
@@ -281,23 +332,9 @@ test("an untrusted project's skills are not delivered", () =>
 
 		assert.deepEqual(
 			resolution.skills.map((skill) => skill.filePath),
-			[userFile],
+			[projectFile, projectOnly],
 		);
-		assert.deepEqual(resolution.missing, ["project-only"]);
-		assert.match(resolution.diagnostics.join("\n"), /not trusted/);
-
-		writeFileSync(
-			join(layout.agentDir, "settings.json"),
-			JSON.stringify({ defaultProjectTrust: "always" }),
-		);
-		const trusted = await resolveDeclaredSkills(
-			["alpha", "project-only"],
-			options(layout),
-		);
-		assert.deepEqual(
-			trusted.skills.map((skill) => skill.content),
-			["Untrusted project alpha.", "Untrusted."],
-		);
+		assert.deepEqual(resolution.missing, []);
 	}));
 
 test("duplicate declarations are delivered once", () =>

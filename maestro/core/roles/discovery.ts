@@ -64,6 +64,12 @@ export interface RolePackDiscoveryEvent {
 export interface RoleDiscoveryOptions {
 	agentConfigDir: string;
 	cwd: string;
+	/**
+	 * The host's project configuration directory name (`.omp` under the current
+	 * host, `.pi` under pi). The project role directory is
+	 * `<cwd>/<configDirName>/agents`. Defaults to `.pi`.
+	 */
+	configDirName?: string;
 	onRolePackDiscovered?(event: RolePackDiscoveryEvent): void;
 }
 
@@ -560,7 +566,10 @@ export function discoverAgentCatalog(
 	}
 
 	addDirectory(join(options.agentConfigDir, "agents"), "global");
-	addDirectory(join(options.cwd, ".pi", "agents"), "project");
+	addDirectory(
+		join(options.cwd, options.configDirName ?? ".pi", "agents"),
+		"project",
+	);
 
 	return { agents: [...agents.values()], diagnostics };
 }

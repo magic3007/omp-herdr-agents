@@ -16,7 +16,7 @@ Do not design a release that creates a GitHub Release without a successful npm p
 
 You need:
 
-- Permission to manage this repository's GitHub Actions settings and npm package access for `pi-herdr-agents`
+- Permission to manage this repository's GitHub Actions settings and npm package access for `omp-herdr-agents`
 - A clean local `main` branch
 
 The **CI** workflow (`.github/workflows/ci.yml`) runs on pushes and pull
@@ -44,7 +44,7 @@ Manual deterministic Herdr integration (required before you push a release commi
 npm run test:integration
 ```
 
-Run that suite from inside Herdr. It uses real Pi and Herdr processes with the local deterministic provider, so it needs no provider credentials or network access. `test/integration/sidebar.test.ts` also starts two disposable Herdr servers with their own HOME, configuration, sockets, and plugin registry under the system temporary directory, installs Herdr's Pi integration into that HOME, runs real `pi` processes there, and removes them afterwards. It needs Linux and a `pi` binary (`PI_BIN` overrides the one on `PATH`) and skips otherwise. `test/integration/sidebar-lifecycle.test.ts` installs the same integration into its isolated agent directory.
+Run that suite from inside Herdr. It uses real omp and Herdr processes with the local deterministic provider, so it needs no provider credentials or network access. `test/integration/sidebar.test.ts` also starts two disposable Herdr servers with their own HOME, configuration, sockets, and plugin registry under the system temporary directory, installs Herdr's omp integration into that HOME, runs real `omp` processes there, and removes them afterwards. It needs Linux and an `omp` binary (`PI_BIN` overrides the one on `PATH`) and skips otherwise. `test/integration/sidebar-lifecycle.test.ts` installs the same integration into its isolated agent directory.
 
 The optional live-provider smoke test is not a release gate:
 
@@ -52,7 +52,7 @@ The optional live-provider smoke test is not a release gate:
 PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 npm run test:integration:live
 ```
 
-Do not release from skipped Herdr tests. Confirm the package preview includes `README.md`, `CHANGELOG.md`, `AGENTS.md`, `docs/`, `config.json.example`, `examples/role-pack/`, and exactly `README.md`, `herdr-plugin.toml`, and `sidebar.mjs` under `plugins/sidebar/`, excludes the active `docs/sidebar-plan.md`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-agents/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`. Confirm it excludes plans, journals, sessions, prototypes, generated evidence, local `config.json` and `openspec/`, and that the worktree integration tests leave no test workspace behind. Durable user configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`; package-root configuration is ignored, so users must move an older file manually or re-run `/subagents-init`.
+Do not release from skipped Herdr tests. Confirm the package preview includes `README.md`, `CHANGELOG.md`, `AGENTS.md`, `docs/`, `config.json.example`, `examples/role-pack/`, and exactly `README.md`, `herdr-plugin.toml`, and `sidebar.mjs` under `plugins/sidebar/`, excludes the active `docs/sidebar-plan.md`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/omp-herdr-agents/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`. Confirm it excludes plans, journals, sessions, prototypes, generated evidence, local `config.json` and `openspec/`, and that the worktree integration tests leave no test workspace behind. Durable user configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`; package-root configuration is ignored, so users must move an older file manually or re-run `/subagents-init`.
 
 ## npm authentication
 
@@ -60,10 +60,10 @@ Do not release from skipped Herdr tests. Confirm the package preview includes `R
 
 After the package exists on npm, steady-state releases use npm trusted publishing (OIDC). No long-lived `NPM_TOKEN` is required.
 
-1. Open the package settings for `pi-herdr-agents` on [npmjs.com](https://www.npmjs.com/).
+1. Open the package settings for `omp-herdr-agents` on [npmjs.com](https://www.npmjs.com/).
 2. Add a trusted publisher for GitHub Actions with:
-   - Organization or user: `giuseppecrj`
-   - Repository: `pi-herdr-agents`
+   - Organization or user: `magic3007`
+   - Repository: `omp-herdr-agents`
    - Workflow filename: `publish.yml`
    - Allowed action: `npm publish`
 3. Confirm the release job has `permissions.id-token: write` and runs on a GitHub-hosted runner (already set in `.github/workflows/publish.yml`).
@@ -104,16 +104,16 @@ You can rerun a failed or incomplete release from **Actions → Release → Run 
 After the workflow succeeds, inspect the published package:
 
 ```bash
-npm view pi-herdr-agents
+npm view omp-herdr-agents
 ```
 
-Test installation through Pi:
+Test installation through omp:
 
 ```bash
-pi install npm:pi-herdr-agents
+omp plugin install npm:omp-herdr-agents
 ```
 
-The package should appear at <https://pi.dev/packages/pi-herdr-agents> after the gallery indexes the npm release.
+The package should appear at <https://www.npmjs.com/package/omp-herdr-agents> once the npm release is public.
 
 ## Troubleshooting
 
@@ -123,7 +123,7 @@ The workflow stops if the matching version tag already points to a different com
 
 ### npm rejects authentication
 
-Confirm that the trusted publisher matches owner `giuseppecrj`, repository `pi-herdr-agents`, and workflow `publish.yml`, that the job has `id-token: write`, and that the runner is GitHub-hosted. If a release reports that `NPM_TOKEN` is bootstrap-only, remove the secret and use the trusted publisher.
+Confirm that the trusted publisher matches owner `magic3007`, repository `omp-herdr-agents`, and workflow `publish.yml`, that the job has `id-token: write`, and that the runner is GitHub-hosted. If a release reports that `NPM_TOKEN` is bootstrap-only, remove the secret and use the trusted publisher.
 
 ### npm reports that the version already exists
 
@@ -133,6 +133,6 @@ If the published `gitHead` does not match this commit, the workflow fails before
 
 A clean repository's first push has `github.event.before` all zeroes. The workflow treats that as `release=false`. This package is already established on npm, so use tokenless trusted publishing for later releases.
 
-### The package is absent from pi.dev
+### The package is absent from npm
 
-Confirm that npm published the package publicly and that `package.json` contains the `pi-package` keyword. Gallery indexing may take some time.
+Confirm that npm published the package publicly and that `package.json` contains the `omp-plugin` keyword. Gallery indexing may take some time.

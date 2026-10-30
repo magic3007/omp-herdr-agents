@@ -124,7 +124,7 @@ export function createLaunchPlanner({
 				: {
 						name: "",
 						version: "1",
-						description: "Pi host-resolved role",
+						description: "Host-resolved role",
 						systemPrompt: params.systemPrompt ?? "",
 						allowedTools: [],
 					},
